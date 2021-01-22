@@ -78,7 +78,7 @@ as storing them there may have security implications.
   <dt name="3-2-1-backup-rule">3-2-1 Backup Rule</dt>
   <dd>Backup rule saying you should always have at least <b>3</b> copies of your data, store <b>2</b> backup copies on different devices or storage media and keep at least <b>1</b> backup copy offsite.</dd>
   <dt name="snowflake">Snowflake</dt>
-  <dd>Snowflakes are servers/machines, which configuration has drifted from original or automated configuration. This is not desired, as such machines are hard to reproduce, which makes recovery harded when they break.</dd>
+  <dd>Snowflake is servers/machines, which configuration has drifted from original or automated configuration. Such drift is not desired, as configuration of such machines are hard to reproduce, which makes the recovery process harded when machine breaks.</dd>
   <dt name="secure-os">Secure OS</dt>
   <dd>Operating System focused on security and privacy, for example <a href="https://tails.boum.org/">Tails</a>.</dd>
   <dt name="gpg-master-key">GPG Master Key</dt>
