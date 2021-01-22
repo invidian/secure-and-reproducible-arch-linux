@@ -100,8 +100,8 @@ First, run the following commands to fetch and verify this repository:
 
 ```sh
 VERSION=testing
-wget https://github.com/invidian/secure-and-reproducible-archlinux/releases/download/${VERSION}/${VERSION}.tar.gz.asc
-wget https://github.com/invidian/secure-and-reproducible-archlinux/archive/${VERSION}.tar.gz
+wget https://github.com/invidian/secure-and-reproducible-arch-linux/releases/download/${VERSION}/${VERSION}.tar.gz.asc
+wget https://github.com/invidian/secure-and-reproducible-arch-linux/archive/${VERSION}.tar.gz
 gpg --verify ${VERSION}.tar.gz.asc
 ```
 
