@@ -96,6 +96,17 @@ Once rebooting into Tails, make sure you configure your network.
 
 With Tails running, we can fetch this repository, verify it's signature and run a script, which will optionally format the temporary volume for you and pull all required dependencies onto it, so you can continue following bootstrapping process without internet access, to make sure generated secrets are not exposed to the internet.
 
+First, run the following commands to fetch and verify this repository:
+
+```sh
+VERSION=testing
+wget https://github.com/invidian/secure-and-reproducible-archlinux/releases/download/${VERSION}/${VERSION}.tar.gz.asc
+wget https://github.com/invidian/secure-and-reproducible-archlinux/archive/${VERSION}.tar.gz
+gpg --verify ${VERSION}.tar.gz.asc
+```
+
+
+
 ## Day-2 Operations
 
 This section documents various processes, which are needed in daily use, like [Updating Kernel](#updating-kernel), [OS Installation](#os-installation) or handling [Lost YubiKey](#lost-yubikey).
