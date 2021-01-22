@@ -156,24 +156,72 @@ as storing them there may have security implications.
 
 ### Glossary
 
-<dl>
-  <dt name="daily_password_manager">Daily Password Manager</dt>
-  <dd>Password manager, which you use for every day logging in on your end devices like laptop or smartphone. This guide use KeePassXC, as it supports YubiKeys as a factor for unlocking the password database.</dd>
-  <dt>Offline Password Manager</dt>
-  <dd>Password manager, stored on encrypted volume, which you only access from Live USB, which has no internet connection. It holds all critial credentials, which are not required during daily operation like AdminPIN, PUK, YubiKey PIV ManagementKey, Secure Boot Platform Key etc.</dd>
-  <dt name="3-2-1-backup-rule">3-2-1 Backup Rule</dt>
-  <dd>Backup rule saying you should always have at least <b>3</b> copies of your data, store <b>2</b> backup copies on different devices or storage media and keep at least <b>1</b> backup copy offsite.</dd>
-  <dt name="snowflake">Snowflake</dt>
-  <dd>Snowflake is servers/machines, which configuration has drifted from original or automated configuration. Such drift is not desired, as configuration of such machines are hard to reproduce, which makes the recovery process harded when machine breaks.</dd>
-  <dt name="secure-os">Secure OS</dt>
-  <dd>Operating System focused on security and privacy, for example <a href="https://tails.boum.org/">Tails</a>.</dd>
-  <dt name="gpg-master-key">GPG Master Key</dt>
-  <dd>GPG Master Key is a main source of trust for your GPG identity. This key has only signing capabilities, it is used only to sign and revoke your <a href="#gpg-sub-keys">GPG sub-keys</a> and it should only be stored on offline volumes to minimize the risk of leaking</dd>
-  <dt name="master-password">Master Password</dt>
-  <dd>Master password is the only password you must remember when following this guide. This password is used for unlocking your daily password manager and to decrypt <a href="#offline-backup-volume">Offline Backup Volumes</a>. This password should be long and complex to make sure it cannot be brute-forced.</dd>
-  <dt name="offline-backup-volume">Offline Backup Volume</dt>
-  <dd>Offline Backup Volume is a local storage device (e.g. Pendrive), encrypted using <a href="#master-password">Master Password</a>, which contains all secrets like <a href="#gpg-master-key">GPG Master Key</a>, which must be kept secure at all cost. Accessing it's data should only be performed from <a href="#secure-os">Secure OS</a> with no network access.</dd>
-  <dt name="#secure-boot-platform-key-pk">Secure Boot Platform Key (PK)</dt>
-  <dd>Top level X.509 certificate with RSA key-pair used in Secure Boot process. "Platform" in "Platform Key" refers to <a href="https://en.wikipedia.org/wiki/Computing_platform">Computing platform</a>, which can be
-an actual piece of hardware you execute code on, but can also be a virtualized environment or a web browser.<br><br>Owning Platform Private Key allows you to proof to the UEFI that you are the physical owner of the hardware.<br><br>This trust is established by requiring physical presence to the unit (platform) to "take ownership", so to add initial PK.<br><br>If the attacker poseses the Platform Private Key and access to the hardware, it does not give them direct access to execute code on the platform, as one needs to execute code, which will add a malicious public key to the signature database.<br><br>Usually this key is populated with device manufacturer (OEM) key and it signs KEK keys, including Microsoft CA.<br><br>This guide assumes that you are platform owner, so as part of <a href="#bootstrapping">Bootstrapping</a> process you will generate and roll your own Platform Key, which will later be stored on <a href="#offline-backup-volume">Offline Backup Volumes</a>, as it is not required for daily operation.</dd>
-</dl>
+#### [Daily Password Manager](#daily-password-manager)
+
+Password manager, which you use for every day logging in on your end devices like laptop or smartphone. This guide use KeePassXC, as it supports YubiKeys as a factor for unlocking the password database.
+
+#
+
+#### [Offline Password Manager](#offline-password-manager)
+
+Password manager, stored on encrypted volume, which you only access from Live USB, which has no internet connection. It holds all critial credentials, which are not required during daily operation like AdminPIN, PUK, YubiKey PIV ManagementKey, Secure Boot Platform Key etc.
+
+#
+
+#### [3-2-1 Backup Rule](#3-2-1-backup-rule)
+
+Backup rule saying you should always have at least **3** copies of your data, store **2** backup copies on different devices or storage media and keep at least **1** backup copy offsite.
+
+#
+
+#### [Snowflake](#snowflake)
+
+Snowflake is servers/machines, which configuration has drifted from original or automated configuration. Such drift is not desired, as configuration of such machines are hard to reproduce, which makes the recovery process harded when machine breaks.
+
+#
+
+#### [Secure OS](#secure-os)
+
+Operating System focused on security and privacy, for example [Tails]("https://tails.boum.org/").
+
+#
+
+#### [GPG Master Key](#gpg-master-key)
+
+GPG Master Key is a main source of trust for your GPG identity.
+This key has only signing capabilities, it is used only to sign and revoke your [GPG sub-keys](#gpg-sub-keys) and it should only be stored on offline volumes to minimize the risk of leaking.
+
+#
+
+#### [Master Password](#master-password)
+
+Master password is the only password you must remember when following this guide.
+This password is used for unlocking your daily password manager and to decrypt [Offline Backup Volumes](#offline-backup-volume).
+This password should be long and complex to make sure it cannot be brute-forced.
+
+#
+
+#### [Offline Backup Volume](#offline-backup-volume)
+
+Offline Backup Volume is a local storage device (e.g. Pendrive), encrypted using [Master Password](#master-password), which contains all secrets like [GPG Master Key](#gpg-master-key), which must be kept secure at all cost.
+Accessing it's data should only be performed from [Secure OS](#secure-os) with no network access.
+
+#
+
+#### [Secure Boot Platform Key (PK)](#secure-boot-platform-key-pk)
+
+Top level X.509 certificate with RSA key-pair used in Secure Boot process.
+"Platform" in "Platform Key" refers to <a href="https://en.wikipedia.org/wiki/Computing_platform">Computing platform</a>, which can be
+an actual piece of hardware you execute code on, but can also be a virtualized environment or a web browser.
+
+Owning Platform Private Key allows you to proof to the UEFI that you are the physical owner of the hardware.
+
+This trust is established by requiring physical presence to the unit (platform) to "take ownership", so to add initial PK.
+
+If the attacker poseses the Platform Private Key and access to the hardware, it does not give them direct access to execute code on the platform, as one needs to execute code, which will add a malicious public key to the signature database.
+
+Usually this key is populated with device manufacturer (OEM) key and it signs KEK keys, including Microsoft CA.
+
+This guide assumes that you are platform owner, so as part of [Bootstrapping](#bootstrapping) process you will generate and roll your own Platform Key, which will later be stored on [Offline Backup Volume](#offline-backup-volume), as it is not required for daily operation.
+
+#
