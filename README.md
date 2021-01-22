@@ -18,32 +18,19 @@ This section describes what hardware/software is required to be able to make ful
 
 Following hardware is required:
 
+#### [1 x (or more) x86 Computer with UEFI, Secure Boot and TPM support](javascript:void(0);)
+
+This guides assumes you have personal machine which will be used for daily operation.
+The guide also supports customized installation for each machine if you have more than one.
+The machine can be as well a virtual machine, though this is not recommended from security point of view, as host machine may not be trusted.
+
+#
+
+#### [1 x Temporary Computer running Linux, Windows or macOS](javascript:void(0);)
+
+For bootstrapping process, this guide requires you to have a machine running modern OS, from which you will be able to create a bootable USB stick with [Secure OS](#secure-os).
+
 <dl>
-  <dt>
-
-	1 x (or more) x86 Computer with UEFI, Secure Boot and TPM support
-
-	</dt>
-  <dd>
-
-	This guides assumes you have personal machine which will be used for daily operation.
-	The guide also supports customized installation for each machine if you have more than one.
-	The machine can be as well a virtual machine, though this is not recommended from security point of view, as host machine may not be trusted.
-
-	</dd>
-
-
-  <dt>
-
-	1 x Temporary Computer running Linux, Windows or macOS
-
-	</dt>
-  <dd>
-
-	For bootstrapping process, this guide requires you to have a machine running modern OS, from which you will be able to create a bootable USB stick with [Secure OS](#secure-os).
-
-	</dd>
-
 
   <dt>
 
