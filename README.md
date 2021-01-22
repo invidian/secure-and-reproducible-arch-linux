@@ -30,85 +30,48 @@ The machine can be as well a virtual machine, though this is not recommended fro
 
 For bootstrapping process, this guide requires you to have a machine running modern OS, from which you will be able to create a bootable USB stick with [Secure OS](#secure-os).
 
-<dl>
+#
 
-  <dt>
+#### [2 x Hardware security device with PIV, OpenPGP and OATH - HOTP like ](javascript:void(0);)[YubiKey 5 Series](https://www.yubico.com/products/compare-yubikey-5-series/)
 
-	2 x Hardware security device with PIV, OpenPGP and OATH - HOTP like [YubiKey 5 Series](https://www.yubico.com/products/compare-yubikey-5-series/)
+The main point of this guide is to make use of hardware security device as much as possible. Two devices are required so one can be kept in secure place as a backup in case primary one is lost, stolen or damaged.
 
-	</dt>
-  <dd>
+#
 
-	The main point of this guide is to make use of hardware security device as much as possible. Two devices are required so one can be kept in secure place as a backup in case primary one is lost, stolen or damaged.
+#### [2 x Dedicated removable storage device (e.g. pendrive) for offline backup of master keys and passwords](javascript:void(0);)
 
-	</dd>
+Some secrets generated as part of this guide (e.g. GPG master key) should be kept on always-offline volume to maximize their security.
+To ensure redundancy for those volumes, it is recommended to have at least 2 copies of them, to be able to handle situation when one of them gets corrupted or simply breaks.
+Those volumes may simply be encrypted pendrives.
 
+#
 
-  <dt>
+#### [1 x (or more) dedicated removable storage device (e.g. pendrive) for a OS recovery volume](javascript:void(0);)
 
-	2 x Dedicated removable storage device (e.g. pendrive) for offline backup of master keys and passwords
+This guide assumes data stored on daily computer is either version controlled, reproducible or regularly backed up into a local storage.
+This means it should be possible and it is recommended to be able to re-install the OS on machine at any time in a timely manner.
+To be able to do that, one should always keep a dedicated OS recovery volume, which is capable of performing fully automated OS installation.
+Having this possibiltiy allows not treating your workstation as [snowflake](#snowflake), giving you confidence, that when workstation breaks or gets stolen, you can quickly recover from it.
 
-	</dt>
-  <dd>
+#
 
-	Some secrets generated as part of this guide (e.g. GPG master key) should be kept on always-offline volume to maximize their security.
-	To ensure redundancy for those volumes, it is recommended to have at least 2 copies of them, to be able to handle situation when one of them gets corrupted or simply breaks.
-	Those volumes may simply be encrypted pendrives.
+#### [2 x Temporary removable storage device (e.g. pendrive) for booting Secure OS and temporary storage](javascript:void(0);)
 
-	</dd>
+As part of bootstrapping process and in case of some incidents, it is recommended to have two storage devices from which one can be formatted to allow installing Secure OS (e.g. Tails) on it and other to be able to store files when rebooting machine from OS connected to the internet to offline mode.
 
+#
 
-  <dt>
+#### [1 x Dedicated removable storage device (e.g. USB HDD, network disk) for local backups](javascript:void(0);)
 
-	1 x (or more) dedicated removable storage device (e.g. pendrive) for a OS recovery volume
+Following [3-2-1 Backup Rule](#3-2-1-backup-rule) and to be able to quickly restore your last backup (restoring from local disk will be faster than restoring from internet), it is recommended to have a local storage available, which do not require internet access.
 
-	</dt>
-  <dd>
+#
 
-	This guide assumes data stored on daily computer is either version controlled, reproducible or regularly backed up into a local storage.
-	This means it should be possible and it is recommended to be able to re-install the OS on machine at any time in a timely manner.
-	To be able to do that, one should always keep a dedicated OS recovery volume, which is capable of performing fully automated OS installation.
-	Having this possibiltiy allows not treating your workstation as [snowflake](#snowflake), giving you confidence, that when workstation breaks or gets stolen, you can quickly recover from it.
+#### [1 x Dedicated S3-compatible remote storage server (e.g. Minio instance, AWS S3) for remote backups](javascript:void(0);)
 
-	</dd>
+Again, following [3-2-1 Backup Rule](#3-2-1-backup-rule), to keep your backups geographically secure, it is recommended to have a remote storage server for keeping another copy of your backups, in case when both active copy and local backup gets damaged (e.g. in apartment fire).
 
-
-  <dt>
-
-	2 x Temporary removable storage device (e.g. pendrive) for booting Secure OS and temporary storage
-
-	</dt>
-  <dd>
-
-	As part of bootstrapping process and in case of some incidents, it is recommended to have two storage devices from which one can be formatted to allow installing Secure OS (e.g. Tails) on it and other to be able to store files when rebooting machine from OS connected to the internet to offline mode.
-
-	</dd>
-
-
-  <dt>
-
-	1 x Dedicated removable storage device (e.g. USB HDD, network disk) for local backups
-
-	</dt>
-  <dd>
-
-	Following [3-2-1 Backup Rule](#3-2-1-backup-rule) and to be able to quickly restore your last backup (restoring from local disk will be faster than restoring from internet), it is recommended to have a local storage available, which do not require internet access.
-
-	</dd>
-
-
-  <dt>
-
-  1 x Dedicated S3-compatible remote storage server (e.g. Minio instance, AWS S3) for remote backups
-
-  </dt>
-  <dd>
-
-  Again, following [3-2-1 Backup Rule](#3-2-1-backup-rule), to keep your backups geographically secure, it is recommended to have a remote storage server for keeping another copy of your backups, in case when both active copy and local backup gets damaged (e.g. in apartment fire).
-
-  </dd>
-</dl>
-
+#
 
 ## Bootstrapping
 
@@ -129,17 +92,22 @@ This section documents various processes, which are needed in daily use, like [U
 
 This section contains useful information and notes not mentioned in the sections above.
 
-### Credentials which shouldn't be stored in [Daily Password Manager](#daily_password_manager)
+### Credentials which shouldn't be stored in [Daily Password Manager](#daily-password-manager)
 
-This section contains list of credentials which are recommended to not be stored in [Daily Password Manager](#daily_password_manager),
+This section contains list of credentials which are recommended to not be stored in [Daily Password Manager](#daily-password-manager),
 as storing them there may have security implications.
 
-<dl>
-  <dt>2FA Recovery Codes</dt>
-  <dd>It is not recommended to keep 2FA Recovery Codes in your Daily Password Manager, because if content of your Daily Password Manager leaks, it allows an attacker to bypass the requirement of your YubiKey to log in into 2FA enabled services.</dd>
-  <dt>Password Salt</dt>
-  <dd>If you add "salt" to passwords stored in Daily Password Manager for extra security, make sure the salt is not stored there too. This also applies when you re-use salt for some other purposes e.g. as a PIN for GPG/PIV.</dd>
-</dl>
+#### [2FA Recovery Codes](javascript:void(0);)
+
+It is not recommended to keep 2FA Recovery Codes in your Daily Password Manager, because if content of your Daily Password Manager leaks, it allows an attacker to bypass the requirement of your YubiKey to log in into 2FA enabled services.
+
+#
+
+#### [Password Salt](javascript:void(0);)
+
+If you add "salt" to passwords stored in Daily Password Manager for extra security, make sure the salt is not stored there too. This also applies when you re-use salt for some other purposes e.g. as a PIN for GPG/PIV.</dd>
+
+#
 
 ### Glossary
 
@@ -169,7 +137,7 @@ Snowflake is servers/machines, which configuration has drifted from original or 
 
 #### [Secure OS](#secure-os)
 
-Operating System focused on security and privacy, for example [Tails]("https://tails.boum.org/").
+Operating System focused on security and privacy, for example [Tails](https://tails.boum.org/).
 
 #
 
@@ -198,7 +166,7 @@ Accessing it's data should only be performed from [Secure OS](#secure-os) with n
 #### [Secure Boot Platform Key (PK)](#secure-boot-platform-key-pk)
 
 Top level X.509 certificate with RSA key-pair used in Secure Boot process.
-"Platform" in "Platform Key" refers to <a href="https://en.wikipedia.org/wiki/Computing_platform">Computing platform</a>, which can be
+"Platform" in "Platform Key" refers to [Computing platform](https://en.wikipedia.org/wiki/Computing_platform), which can be
 an actual piece of hardware you execute code on, but can also be a virtualized environment or a web browser.
 
 Owning Platform Private Key allows you to proof to the UEFI that you are the physical owner of the hardware.
