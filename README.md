@@ -19,28 +19,114 @@ This section describes what hardware/software is required to be able to make ful
 Following hardware is required:
 
 <dl>
-  <dt>1 x (or more) x86 Computer with UEFI, Secure Boot and TPM support</dt>
-  <dd>This guides assumes you have personal machine which will be used for daily operation. The guide also supports customized installation for each machine if you have more than one. The machine can be as well a virtual machine, though this is not recommended from security point of view, as host machine may not be trusted.</dd>
-  <dt> 1 x Temporary Computer running Linux, Windows or macOS</dt>
-  <dd>For bootstrapping process, this guide requires you to have a machine running modern OS, from which you will be able to create a bootable USB stick with <a href="#secure-os">Secure OS</a>.</dt>
-  <dt>2 x Hardware security device with PIV, OpenPGP and OATH - HOTP like <a href="https://www.yubico.com/products/compare-yubikey-5-series/">YubiKey 5 Series</a></dt>
-  <dd>The main point of this guide is to make use of hardware security device as much as possible. Two devices are required so one can be kept in secure place as a backup in case primary one is lost, stolen or damaged.</dd>
-  <dt>2 x Dedicated removable storage device (e.g. pendrive) for offline backup of master keys and passwords</dt>
-  <dd>Some secrets generated as part of this guide (e.g. GPG master key) should be kept on always-offline volume to maximize their security. To ensure redundancy for those volumes, it is recommended to have at least 2 copies of them, to be able to handle situation when one of them gets corrupted or simply breaks. Those volumes may simply be encrypted pendrives.</dd>
-  <dt>1 x (or more) dedicated removable storage device (e.g. pendrive) for a OS recovery volume</dt>
-  <dd>This guide assumes data stored on daily computer is either version controlled, reproducible or regularly backed up into a local storage. This means it should be possible and it is recommended to be able to re-install the OS on machine at any time in a timely manner. To be able to do that, one should always keep a dedicated OS recovery volume, which is capable of performing fully automated OS installation. Having this possibiltiy allows not treating your workstation as <a href="#snowflake">"snowflake"</a>, giving you confidence, that when workstation breaks or gets stolen, you can quickly recover from it.</dd>
-  <dt>2 x Temporary removable storage device (e.g. pendrive) for booting Secure OS and temporary storage</dt>
-  <dd>As part of bootstrapping process and in case of some incidents, it is recommended to have two storage devices from which one can be formatted to allow installing Secure OS (e.g. Tails) on it and other to be able to store files when rebooting machine from OS connected to the internet to offline mode.</dd>
-  <dt>1 x Dedicated removable storage device (e.g. USB HDD, network disk) for local backups</dt>
-  <dd>Following <a href="#3-2-1-backup-rule">3-2-1 Backup Rule</a> and to be able to quickly restore your last backup (restoring from local disk will be faster than restoring from internet), it is recommended to have a local storage available, which do not require internet access.</dd>
-  <dt>1 x Dedicated S3-compatible remote storage server (e.g. Minio instance, AWS S3) for remote backups</dt>
-  <dd>Again, following <a href="#3-2-1-backup-rule">3-2-1 Backup Rule</a>, to keep your backups geographically secure, it is recommended to have a remote storage server for keeping another copy of your backups, in case when both active copy and local backup gets damaged (e.g. in apartment fire). </dd>
+  <dt>
+
+	1 x (or more) x86 Computer with UEFI, Secure Boot and TPM support
+
+	</dt>
+  <dd>
+
+	This guides assumes you have personal machine which will be used for daily operation.
+	The guide also supports customized installation for each machine if you have more than one.
+	The machine can be as well a virtual machine, though this is not recommended from security point of view, as host machine may not be trusted.
+
+	</dd>
+
+
+  <dt>
+
+	1 x Temporary Computer running Linux, Windows or macOS
+
+	</dt>
+  <dd>
+
+	For bootstrapping process, this guide requires you to have a machine running modern OS, from which you will be able to create a bootable USB stick with [Secure OS](#secure-os).
+
+	</dd>
+
+
+  <dt>
+
+	2 x Hardware security device with PIV, OpenPGP and OATH - HOTP like [YubiKey 5 Series](https://www.yubico.com/products/compare-yubikey-5-series/)
+
+	</dt>
+  <dd>
+
+	The main point of this guide is to make use of hardware security device as much as possible. Two devices are required so one can be kept in secure place as a backup in case primary one is lost, stolen or damaged.
+
+	</dd>
+
+
+  <dt>
+
+	2 x Dedicated removable storage device (e.g. pendrive) for offline backup of master keys and passwords
+
+	</dt>
+  <dd>
+
+	Some secrets generated as part of this guide (e.g. GPG master key) should be kept on always-offline volume to maximize their security.
+	To ensure redundancy for those volumes, it is recommended to have at least 2 copies of them, to be able to handle situation when one of them gets corrupted or simply breaks.
+	Those volumes may simply be encrypted pendrives.
+
+	</dd>
+
+
+  <dt>
+
+	1 x (or more) dedicated removable storage device (e.g. pendrive) for a OS recovery volume
+
+	</dt>
+  <dd>
+
+	This guide assumes data stored on daily computer is either version controlled, reproducible or regularly backed up into a local storage.
+	This means it should be possible and it is recommended to be able to re-install the OS on machine at any time in a timely manner.
+	To be able to do that, one should always keep a dedicated OS recovery volume, which is capable of performing fully automated OS installation.
+	Having this possibiltiy allows not treating your workstation as [snowflake](#snowflake), giving you confidence, that when workstation breaks or gets stolen, you can quickly recover from it.
+
+	</dd>
+
+
+  <dt>
+
+	2 x Temporary removable storage device (e.g. pendrive) for booting Secure OS and temporary storage
+
+	</dt>
+  <dd>
+
+	As part of bootstrapping process and in case of some incidents, it is recommended to have two storage devices from which one can be formatted to allow installing Secure OS (e.g. Tails) on it and other to be able to store files when rebooting machine from OS connected to the internet to offline mode.
+
+	</dd>
+
+
+  <dt>
+
+	1 x Dedicated removable storage device (e.g. USB HDD, network disk) for local backups
+
+	</dt>
+  <dd>
+
+	Following [3-2-1 Backup Rule](#3-2-1-backup-rule) and to be able to quickly restore your last backup (restoring from local disk will be faster than restoring from internet), it is recommended to have a local storage available, which do not require internet access.
+
+	</dd>
+
+
+  <dt>
+
+  1 x Dedicated S3-compatible remote storage server (e.g. Minio instance, AWS S3) for remote backups
+
+  </dt>
+  <dd>
+
+  Again, following [3-2-1 Backup Rule](#3-2-1-backup-rule), to keep your backups geographically secure, it is recommended to have a remote storage server for keeping another copy of your backups, in case when both active copy and local backup gets damaged (e.g. in apartment fire).
+
+  </dd>
 </dl>
 
 
 ## Bootstrapping
 
-This section explains steps, which needs to be performed once to start using practices defined in this guide. It includes tasks like generating [GPG Master Key](#gpg-master-key), creating [Master Password](#master-password), generating [Secure Boot Platform Key (PK)](#secure-boot-platform-key-pk) etc.
+This section explains steps, which needs to be performed once to start using practices defined in this guide.
+It includes tasks like generating [GPG Master Key](#gpg-master-key), creating [Master Password](#master-password), generating [Secure Boot Platform Key (PK)](#secure-boot-platform-key-pk) etc.
 
 ## Day-2 Operations
 
