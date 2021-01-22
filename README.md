@@ -78,15 +78,43 @@ Again, following [3-2-1 Backup Rule](#3-2-1-backup-rule), to keep your backups g
 This section explains steps, which needs to be performed once to start using practices defined in this guide.
 It includes tasks like generating [GPG Master Key](#gpg-master-key), creating [Master Password](#master-password), generating [Secure Boot Platform Key (PK)](#secure-boot-platform-key-pk) etc.
 
+### Getting Tails
+
+First step of bootstrapping is to get a Tails USB Stick created. We will use Tails without network configured for secrets generation.
+
+For this step, following items are required from [Requirements](#requirements) section:
+- 1 x Temporary removable storage device (e.g. pendrive)
+- 1 x Temporary computer running Windows, Linux or macOS
+
+With items above prepared, head to [Download and install Tails](https://tails.boum.org/install/index.en.html) and prepare your USB stick.
+
+Before rebooting into Tails, make sure you remember an address of this guide, so you can continue following it there.
+
+Once rebooting into Tails, make sure you configure your network.
+
+### Fetching required resources into temporary volume
+
+With Tails running, we can fetch this repository, verify it's signature and run a script, which will optionally format the temporary volume for you and pull all required dependencies onto it, so you can continue following bootstrapping process without internet access, to make sure generated secrets are not exposed to the internet.
+
 ## Day-2 Operations
 
 This section documents various processes, which are needed in daily use, like [Updating Kernel](#updating-kernel), [OS Installation](#os-installation) or handling [Lost YubiKey](#lost-yubikey).
 
 ### OS Installation
 
+### Booting up machine
+
 ### Updating Kernel
 
 ### Lost YubiKey
+
+### Damaged YubiKey
+
+### Bootstrapping new hardware
+
+### Signing someone else's GPG key
+
+### Storing MFA recovery tokens
 
 ## Miscellaneous
 
@@ -145,6 +173,12 @@ Operating System focused on security and privacy, for example [Tails](https://ta
 
 GPG Master Key is a main source of trust for your GPG identity.
 This key has only signing capabilities, it is used only to sign and revoke your [GPG sub-keys](#gpg-sub-keys) and it should only be stored on offline volumes to minimize the risk of leaking.
+
+#
+
+#### [GPG Sub-keys](#gpg-sub-keys)
+
+GPG keys which are used on a daily basis. Usually it is a signing key, encryption key and authentication key. All 3 keys should be stored on Hardware security device.
 
 #
 
