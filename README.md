@@ -78,6 +78,19 @@ Again, following [3-2-1 Backup Rule](#3-2-1-backup-rule), to keep your backups g
 This section explains steps, which needs to be performed once to start using practices defined in this guide.
 It includes tasks like generating [GPG Master Key](#gpg-master-key), creating [Master Password](#master-password), generating [Secure Boot Platform Key (PK)](#secure-boot-platform-key-pk) etc.
 
+At the end of this section, you will have:
+- The following secrets generated and backed up on 2 encrypted pendrives:
+  - Master Password
+  - PIN
+  - GPG AdminPIN
+  - PIV PUK
+  - (Optional) Password salt
+- Both YubiKeys initialized with:
+  - Signing key (DB) for Secure boot via PIV applet.
+  - GPG signing, encryption and authentication sub-keys via OpenPGP applet.
+  - Challenge-Response on 2nd slot.
+- Recovery USB stick with personalized Arch Linux installer.
+
 ### Getting Tails
 
 First step of bootstrapping is to get a Tails USB Stick created. We will use Tails without network configured for secrets generation.
@@ -94,18 +107,65 @@ Once rebooting into Tails, make sure you configure your network.
 
 ### Fetching required resources into temporary volume
 
-With Tails running, we can fetch this repository, verify it's signature and run a script, which will optionally format the temporary volume for you and pull all required dependencies onto it, so you can continue following bootstrapping process without internet access, to make sure generated secrets are not exposed to the internet.
+With Tails running, we can fetch this repository, verify it's signature and run a script, which will pull all required dependencies into a temporary volume, so you can continue following bootstrapping process without internet access, to make sure generated secrets are not exposed to the internet.
 
-First, run the following commands to fetch and verify this repository:
+#### (Optional) Formatting temporary volume
+
+If your pendrive is not formatted yet, use `Utilities -> Disks` application on Tails to select the right disk to format
+and create a filesystem on it.
+
+This step must be done only once and automating it in a secure way is complex, so doing it via UI is acceptable.
+
+#### Mount temporary volume
+
+With temporary volume formatted, use `Accessories -> Files` to mount it. Once mounted, right-click in the window and open
+the terminal in mounted location.
+
+#### Fetching repository
+
+Run the following command to import GPG signing public key, which was used to sign releases in this repository.
+This will allow to verify the signature of downloaded code.
+```sh
+curl --socks5 localhost:9050 https://github.com/invidian.gpg | gpg --import
+```
+
+Then, run the commands below to fetch and verify this repository:
 
 ```sh
 VERSION=testing
 wget https://github.com/invidian/secure-and-reproducible-arch-linux/releases/download/${VERSION}/${VERSION}.tar.gz.asc
 wget https://github.com/invidian/secure-and-reproducible-arch-linux/archive/${VERSION}.tar.gz
-gpg --verify ${VERSION}.tar.gz.asc
+gpg --verify ${VERSION}.tar.gz.asc ${VERSION}.tar.gz
 ```
 
+If everything worked, you should see the output similar to the following:
+```console
+gpg: Signature made Fri Jan 22 23:22:10 2021 UTC
+gpg:                using RSA key C79F76DAB29245AE262EC790CEBABB44587E3AE2
+gpg: Good signature from "Mateusz Gozdek <mgozdekof@gmail.com>" [unknown]
+```
 
+The output will also include the following:
+```console
+gpg: WARNING: This key is not certified with a trusted signature!
+gpg:          There is no indication that the signature belongs to the owner.
+Primary key fingerprint: 297C 1601 AF63 2225 7066  7925 9718 7FA1 271E C224
+     Subkey fingerprint: C79F 76DA B292 45AE 262E  C790 CEBA BB44 587E 3AE2
+```
+
+Despite this warning, the repository you downloaded is still correct according to the signing key that you downloaded.
+
+To learn more about this warning, read [Tails documentation about verifying images](https://tails.boum.org/install/download/index.en.html#command-line).
+
+#### Fetching dependencies
+
+Use Terminal opened in previous step or make sure you're in the temporary volume as a working directly and run the following commands to download the packages,
+which we will install once we go into offline mode.
+
+```sh
+sudo apt -y install --download-only wget gnupg2 gnupg-agent dirmngr cryptsetup scdaemon pcscd secure-delete hopenpgp-tools yubikey-personalization
+cp /var/cache/apt/archives/*.deb ./
+```
 
 ## Day-2 Operations
 
@@ -126,6 +186,8 @@ This section documents various processes, which are needed in daily use, like [U
 ### Signing someone else's GPG key
 
 ### Storing MFA recovery tokens
+
+### Updating system configuration and rebuilding Recovery ISO image
 
 ## Miscellaneous
 
