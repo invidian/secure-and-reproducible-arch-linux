@@ -84,8 +84,8 @@ At the end of this section, you will have:
   - PIN
   - GPG AdminPIN
   - PIV PUK
-  - (Optional) Password salt
   - YubiKey Challenge-Response secret
+  - (Optional) Password salt
 - Both YubiKeys initialized with:
   - Signing key (DB) for Secure boot via PIV applet.
   - GPG signing, encryption and authentication sub-keys via OpenPGP applet.
@@ -192,6 +192,12 @@ You should find output similar to the one above, including the warning.
 With downloaded and verified Arch Linux ISO, you can now plug your USB device which you would like to use as an [OS Recovery Volume](#os-recovery-volume). For now we will write vanilla Arch Linux ISO on it to be able to create a customized version of it.
 
 For simplicity, you can again use `Utilities -> Disks` application on Tails, select the right device, then open menu and select "Restore Disk Image" option there.
+
+### Rebooting into offline mode
+
+With all dependencies from the internet pulled, we can now reboot to make sure our OS has not been tampered and to make sure we stay in offline mode.
+
+After the reboot, mount the temporary volume, unpack this repository and continue following the instruction.
 
 ## Day-2 Operations
 
