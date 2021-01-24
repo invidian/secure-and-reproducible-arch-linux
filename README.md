@@ -85,6 +85,7 @@ At the end of this section, you will have:
   - GPG AdminPIN
   - PIV PUK
   - (Optional) Password salt
+  - YubiKey Challenge-Response secret
 - Both YubiKeys initialized with:
   - Signing key (DB) for Secure boot via PIV applet.
   - GPG signing, encryption and authentication sub-keys via OpenPGP applet.
@@ -126,7 +127,7 @@ the terminal in mounted location.
 Run the following command to import GPG signing public key, which was used to sign releases in this repository.
 This will allow to verify the signature of downloaded code.
 ```sh
-curl --socks5 localhost:9050 https://github.com/invidian.gpg | gpg --import
+wget -O- https://github.com/invidian.gpg | gpg --import
 ```
 
 Then, run the commands below to fetch and verify this repository:
@@ -159,13 +160,38 @@ To learn more about this warning, read [Tails documentation about verifying imag
 
 #### Fetching dependencies
 
-Use Terminal opened in previous step or make sure you're in the temporary volume as a working directly and run the following commands to download the packages,
-which we will install once we go into offline mode.
+Use Terminal opened in previous step or make sure you're in the temporary volume as a working directly and run the following commands to download the packages, which we will install once we go into offline mode.
 
 ```sh
-sudo apt -y install --download-only wget gnupg2 gnupg-agent dirmngr cryptsetup scdaemon pcscd secure-delete hopenpgp-tools yubikey-personalization
+sudo apt -y install --download-only wget gnupg2 gnupg-agent dirmngr cryptsetup scdaemon pcscd secure-delete hopenpgp-tools yubikey-personalization yubikey-manager
 cp /var/cache/apt/archives/*.deb ./
 ```
+Next, visit [Arch Linux Download page](https://archlinux.org/download/), find appropriate mirror for you and download latest Arch Linux ISO from it. We will use this ISO to build a personalized Arch Linux ISO, which will be much easier to do from Arch Linux itself.
+
+For example, run the following commands to download the ISO and the ISO signature from Worldwide mirror:
+```sh
+export VERSION=2021.01.01
+wget http://mirror.rackspace.com/archlinux/iso/${VERSION}/archlinux-${VERSION}-x86_64.iso
+wget http://mirror.rackspace.com/archlinux/iso/${VERSION}/archlinux-${VERSION}-x86_64.iso.sig
+```
+
+Next, we will download GPG Public Key which was used to create a signature, so we can verify it. You can do it with the following command:
+```sh
+gpg --keyserver keyserver.ubuntu.com --recv-keys 0x4aa4767bbc9c4b1d18ae28b77f2d434b9741e8ac
+```
+
+Finally, verify the image with the command below:
+```sh
+gpg --verify archlinux-${VERSION}-x86_64.iso.sig archlinux-${VERSION}-x86_64.iso
+```
+
+You should find output similar to the one above, including the warning.
+
+#### Creating Arch Linux bootable USB device
+
+With downloaded and verified Arch Linux ISO, you can now plug your USB device which you would like to use as an [OS Recovery Volume](#os-recovery-volume). For now we will write vanilla Arch Linux ISO on it to be able to create a customized version of it.
+
+For simplicity, you can again use `Utilities -> Disks` application on Tails, select the right device, then open menu and select "Restore Disk Image" option there.
 
 ## Day-2 Operations
 
@@ -285,5 +311,11 @@ If the attacker poseses the Platform Private Key and access to the hardware, it 
 Usually this key is populated with device manufacturer (OEM) key and it signs KEK keys, including Microsoft CA.
 
 This guide assumes that you are platform owner, so as part of [Bootstrapping](#bootstrapping) process you will generate and roll your own Platform Key, which will later be stored on [Offline Backup Volume](#offline-backup-volume), as it is not required for daily operation.
+
+#
+
+#### [OS Recovery Volume](#os-recovery-volume)
+
+Removable device, which contains your personalized Arch Linux installer.
 
 #
