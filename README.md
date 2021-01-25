@@ -92,7 +92,11 @@ At the end of this section, you will have:
   - Challenge-Response on 2nd slot.
 - Recovery USB stick with personalized Arch Linux installer.
 
-### Getting Tails
+### Preparation
+
+Before we start creating secrets etc, we must prepare some dependencies which will be needed later. Follow the steps below.
+
+#### Getting Tails
 
 First step of bootstrapping is to get a Tails USB Stick created. We will use Tails without network configured for secrets generation.
 
@@ -106,23 +110,23 @@ Before rebooting into Tails, make sure you remember an address of this guide, so
 
 Once rebooting into Tails, make sure you configure your network.
 
-### Fetching required resources into temporary volume
+#### Fetching required resources into temporary volume
 
 With Tails running, we can fetch this repository, verify it's signature and run a script, which will pull all required dependencies into a temporary volume, so you can continue following bootstrapping process without internet access, to make sure generated secrets are not exposed to the internet.
 
-#### (Optional) Formatting temporary volume
+##### (Optional) Formatting temporary volume
 
 If your pendrive is not formatted yet, use `Utilities -> Disks` application on Tails to select the right disk to format
 and create a filesystem on it.
 
 This step must be done only once and automating it in a secure way is complex, so doing it via UI is acceptable.
 
-#### Mount temporary volume
+##### Mount temporary volume
 
 With temporary volume formatted, use `Accessories -> Files` to mount it. Once mounted, right-click in the window and open
 the terminal in mounted location.
 
-#### Fetching repository
+##### Fetching repository
 
 Run the following command to import GPG signing public key, which was used to sign releases in this repository.
 This will allow to verify the signature of downloaded code.
@@ -158,7 +162,7 @@ Despite this warning, the repository you downloaded is still correct according t
 
 To learn more about this warning, read [Tails documentation about verifying images](https://tails.boum.org/install/download/index.en.html#command-line).
 
-#### Fetching dependencies
+##### Fetching dependencies
 
 Use Terminal opened in previous step or make sure you're in the temporary volume as a working directly and run the following commands to download the packages, which we will install once we go into offline mode.
 
@@ -187,17 +191,57 @@ gpg --verify archlinux-${VERSION}-x86_64.iso.sig archlinux-${VERSION}-x86_64.iso
 
 You should find output similar to the one above, including the warning.
 
-#### Creating Arch Linux bootable USB device
+Next, download hardended GPG configuration we will use when generating GPG keys:
+```sh
+wget https://raw.githubusercontent.com/drduh/config/master/gpg.conf
+```
+
+#### Rebooting into offline mode
+
+With all dependencies from the internet pulled, we can now reboot to make sure our OS has not been tampered and to make sure we stay in offline mode.
+
+When starting Tails, make sure you configure administator password and you disable network access.
+
+After the reboot, mount the temporary volume, unpack this repository and continue following the instruction.
+
+### Creating secrets
+
+Now we can proceed with the secrets generation.
+
+#### Master Password
+
+First thing to do is to create and memorize your personal [Master Password]. It will be used to protect your [Daily Password Manager](#daily-password-manager) and to decrypt [Offline Backup Volumes](#offline-backup-volume).
+
+
+#### Backup volumes
+
+With your new Master Password in mind, plug your USB devices which will serve as a [Offline Backup Volumes](#offline-backup-volume) and use `Utilities -> Disks` application on Tails to create a partition and **encrypted** filesystem on them.
+
+If you are short on USB slots, plug and format them one by one.
+
+At the end, leave at least one device plugged, decrypt it and mount it, so we can save some files there.
+
+#### Generating GPG Master Key
+
+Open Terminal and change working directory to one of Offline Backup Volumes. Then run the following commands:
+```sh
+export GNUPGHOME=$(pwd)/gnupg-workspace
+mkdir -p "$GNUPGHOME"
+chmod 0700 "$GNUPGHOME"
+```
+
+Now, copy previosly downloaded `gpg.conf` file from temporary volume into working directory and run:
+```sh
+mv gpg.conf "$GNUPGHOME/"
+```
+
+##### Creating Arch Linux bootable USB device
 
 With downloaded and verified Arch Linux ISO, you can now plug your USB device which you would like to use as an [OS Recovery Volume](#os-recovery-volume). For now we will write vanilla Arch Linux ISO on it to be able to create a customized version of it.
 
 For simplicity, you can again use `Utilities -> Disks` application on Tails, select the right device, then open menu and select "Restore Disk Image" option there.
 
-### Rebooting into offline mode
-
-With all dependencies from the internet pulled, we can now reboot to make sure our OS has not been tampered and to make sure we stay in offline mode.
-
-After the reboot, mount the temporary volume, unpack this repository and continue following the instruction.
+After successful disk restoration, you can unplug this USB device for now, we will need it at latest stage.
 
 ## Day-2 Operations
 
