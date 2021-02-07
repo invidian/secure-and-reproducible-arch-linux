@@ -22,9 +22,11 @@ This section describes possible attack scenarios against the data which this gui
 
 While assessing the security of your Daily Password Manager, we must consider 2 distinct circumstances. The first one is how you usually access your password manager. The second one is how attacker can get access to it.
 
+#### Regular authentication methods for Daily Password Manager
+
 In the regular circumstances, your Daily Password Manager will be protected by the following factors:
 
-[Copy of your Daily Password Manager database file](#copy-of-your-daily-password-manager-database-file)
+##### [Copy of your Daily Password Manager database file](#copy-of-your-daily-password-manager-database-file)
 
 This data will be stored on the following devices:
 
@@ -32,21 +34,27 @@ This data will be stored on the following devices:
 - Your local backup device
 - Your remote backup storage
 
-#
-
-[Your Master Password](#your-master-password)
+##### [Your Master Password](#your-master-password)
 
 This password should never be written down or stored directly to make it harder to leak. Harder does not mean impossible, as for example, if you type your password on a compromised device (e.g. with software keylogger) or via hardware keylogger, your password will effectively be compromised. This is why it is important to only type your Master Password on trusted devices.
 
-#
-
-[Challenge Secret from your Hardware Security Module](#challenge-secret-from-your-hardware-security-module)
+##### [Challenge Secret from your Hardware Security Module](#challenge-secret-from-your-hardware-security-module)
 
 Last factor required to get access to your password manager is a physical possession and physical presence of your Hardware Security Device, in this case YubiKey.
 
 E.g. if someone takes over your machine using remote control software, they won't be able to open your locked password manager.
 
-#
+```diff
++ During regular operation, only possesion of your YubiKey make it possible to unlock the password database.
++ Alternatively, one must additionally posses the secret used to configure the YubiKey.
++ In case of brute-force attack, using HSM increases the entropy of the encryption key for the database.
+```
+
+
+
+
+
+#### Attack vectors for Daily Password Manager
 
 An attacker may have additional ways of getting information from your password manager. This includes scenarios like:
 
@@ -57,9 +65,11 @@ An attacker may have additional ways of getting information from your password m
 
 The same 2 distinct circumstances applies to security of your online services. The first one is how you usually access your password manager. The second one is how attacker can get access to it.
 
+#### Regular authentication methods for online services
+
 The security of online services you use will differ from service to service. All services are usually protected with the following measures:
 
-[High-entropy unique password](#high-entropy-unique-password)
+##### High-entropy unique password
 
 Using password manager allows you to use unique password for every service, with optimal level of entropy to make used password impossible to brute-force.
 
@@ -67,7 +77,7 @@ Using password manager allows you to use unique password for every service, with
 
 Some services over MFA authentication using the following mechanism:
 
-[OATH TOTP (Time-based One-Time Password)](#oath-totp-time-based-one-time-password)
+##### OATH TOTP (Time-based One-Time Password)
 
 Most popular 2nd authentication factor (2FA). In this guide, TOTP secrets are stored on YubiKey and obtaining them requires physical touch of the device. This means if someone compromises your machine remotely, they won't be able to obtain codes required for logging in into the services.
 
@@ -75,37 +85,210 @@ Most popular 2nd authentication factor (2FA). In this guide, TOTP secrets are st
 
 Some services may also offer FIDO2 authentication. In such case, the protection is based on 2 factors:
 
-[Physical possession and presence of Hardware Security Module](#physical-possession-and-hardware-presence-of-hardware-security-module)
+##### Physical possession and presence of Hardware Security Module
 
 YubiKey offers FIDO2 authentication, where secret key is stored on your YubiKey and touch is required to confirm physical presence.
 
 #
 
-[FIDO2 PIN (usually Master PIN)](#fido2-pin-usually-master-pin)
+##### FIDO2 PIN (usually Master PIN)
 
 As a second factor, PIN is used so even if someone steals your security key, they won't be able to use it to impersonate you.
 
 #
 
+#### Attack vectors for online services
+
 When attacker wants to take over your online account, they have the following attack vectors:
 
-[Compromising your Daily Password Manager via software](#compromising-your-daily-password-manager-via-software)
+##### Compromising your Daily Password Manager via software
 
 If an attacker gets remote access to your Daily Password Manager, they can then access all the services, which are not protected by MFA. Services protected with OATH-TOTP or FIDO2 should remain safe.
 
-[Compromising online service itself](#compromising-online-service-itself)
+##### Getting physical access to your unlocked machine with unlocked password manager
+
+If you leave your machine unattended, including security key plugged in, an attacker with physical access may access all your accounts, **including ones protected with OATH-TOTP**. Only accounts protected using FIDO2 should remain safe, as they require Master PIN every time you authenticate.
+
+Do note, that an attacker with physical access may install a keylogger on your machine and trick you to provide your Master PIN, then again access your machine unattended and compromise all your accounts.
+
+##### Compromising online service itself
 
 If targeted online service itself is vulnerable to some attacks, exploiting such vulnerability may allow an attacker to take over your account in there.
 
-[Man-in-the-middle (MITM)](#man-in-the-middle)
+##### Man-in-the-middle (MITM)
 
 If network environment you work in is controlled by attacker, they may trick you into visiting their own version of service to trick you to send them your password. In such scenario, again, accounts using MFA should remain secure.
 
-[Phishing](#phishing)
+In case of MITM attacks, an attacker may also try to steal your browser cookies, which will allow to access your account, bypassing authentication requirement.
+
+##### Phishing
 
 An attacker may try to trick you into telling them you own password. This scenario is also safe for accounts using MFA.
 
+##### Session hijacking
+
+If online service is vulnerable to [XSS](https://en.wikipedia.org/wiki/Cross-site_scripting) vulnerability, they may try to trick you into clicking a link which opening will result in sending your session cookies to the attacker, so they can impersonate you bypassing the authentication.
+
+One can try to protect themselves against such attacks by disabling or conditionally enabling JavaScript on the websites you visit.
+
 ### Security of your data
+
+Security of your data will depend on where the data is stored. For each data storage, we will again identify protection measures and attack vectors.
+
+With this guide we identify the following storages for your data:
+
+- PC disk
+- Mobile phone built-in storage
+- Local backup storage
+- Remote backup storage
+- Offline Backup Volume
+
+#### PC disk
+
+With this guide all your disks are protected using Full Disk Encryption done with LUKS.
+
+##### Regular authentication methods for PC disks
+
+###### [Access to your disk](javascript:void(0);)
+
+This may sound obvious, but for accessing your encrypted data, either physical presence or authenticated network access must be satisfied to get access to your data. 
+
+#
+
+###### [Encryption key](javascript:void(0);)
+
+For each of your disk there will be unique encryption key generated with entropy level, which makes brute-forcing such key infeasible. In regular use, this key will be additionally protected with GPG encryption.
+
+#
+
+###### [Master PIN](javascript:void(0);)
+
+As your disk encryption key is encrypted, your GPG encryption key stored on YubiKey will be needed every time you need to decrypt your PC disk and in order to use your GPG encryption key, you must provide your Master PIN, which should only be stored in your memory.
+
+###### [Hardware Security Module](javascript:void(0);)
+
+As your disk encryption key is encrypted, your GPG encryption key stored on YubiKey will be needed every time you need to decrypt your PC disk.
+
+###### [TPM secret](javascript:void(0);)
+
+In addition to the encryption key, there will be a secret generated, which will be stored in TPM of your device. This ensures, that your data can only be accessed on your machine running your, trusted software.
+
+#
+
+##### Special authentication methods for PC disks
+
+###### [Recovery key](javascript:void(0);)
+
+In addition to the authentication methods above, there will be secondary encryption key generated, which will be stored in [Offline Backup Volume](#offline-backup-volume). It can be used in the following situations:
+
+- Your machine BIOS gets updated
+- You lose your encryption key
+- Your TPM gets wiped
+- Your machine gets damaged (e.g. access to TPM, but not HDD)
+
+In order to access the Recovery Key, you must first have access to Offline Backup Volume described below.
+
+#
+
+##### Attack vectors for PC disks
+
+###### [Software attack](javascript:void(0);)
+
+If your machine gets compromised via software, an attacker will effectively bypass the authentication and gets access to all your data.
+
+#
+
+###### [Physical access to your unlocked machine](javascript:void(0);)
+
+If you leave your machine unlocked, an attacker with physical access to it may access and dump all the data stored on it.
+
+#
+
+#### Mobile phone built-in storage
+
+With mobile devices, we cannot have as sophisticated security settings as with PC disks, so this section describes what is used for mobile devices.
+
+##### Regular authentication methods for mobile built-in storage
+
+###### [Physical access](javascript:void(0);)
+
+Mobile devices cannot be decrypted remotely, so physical access to the device is required to get access to data stored on it.
+
+#
+
+###### [Encryption password](javascript:void(0);)
+
+Mobile device will have encryption password set, which is stored in the security module on device itself, which should protect it against brute-force attacks.
+
+#
+
+##### Attack vectors for mobile built-in storage
+
+###### [Software remote attack](javascript:void(0);)
+
+If your device is running vulnerable software and it's turned on, it might get exploited which will give an attacker remote access to your data.
+
+#
+
+###### [Extraction of encryption keys from memory](javascript:void(0);)
+
+Qualified attacker may also extract encryption keys from your device RAM, assuming it has physical access to your device, then use this encryption key to get access to your data.
+
+#
+
+###### [Physical access with fingerprint scan to your turned on and locked device](javascript:void(0);)
+
+If your device gets stolen locked and attacker will posses your fingerprint, they may get access to data stored on your device.
+
+```diff
+- The fingerprint can be taken from the device itself, making this attack relatively easy.
+```
+
+#
+
+###### [Physical access to your unlocked device](javascript:void(0);)
+
+If an attacker manages to posses your mobile device unlocked (e.g. stealing it), they immediately get access to all your data.
+
+#
+
+#### Local backup storage
+
+Your local backup storage might be less secure than your PC disk, due to the fact that it might be accessed from multiple devices. Depending on architecture of your local storage, you will use different authentication methods.
+
+##### Regular authentication methods for local backup storage
+
+###### [Encryption key](javascript:void(0);)
+
+If your local backup storage is a portable disk, similar to PC disk protection, it will be protected using encrypted encryption key, which should be stored on all devices accessing your disk.
+
+###### [Hardware Security Module](javascript:void(0);)
+
+If your local backup storage is a portable disk, similar to PC disk protection, to decrypt encryption key of your device, you must have physical access to your YubiKey.
+
+###### [Master PIN](javascript:void(0);)
+
+If your local backup storage is a portable disk, similar to PC disk protection, to decrypt encryption key of your device, you must know your Master PIN.
+
+If your local backup storage is a remote system (e.g. local server), then you will use your Hardware Security Module and Master PIN to authenticate to this remote system.
+
+##### Special authentication methods for local backup storage
+
+[Recovery key](javascript:void(0);)
+
+This step is optional, but if you wish, you may generate a special recovery key which will be stored on your [Offline Backup Volume](#offline-backup-volume).
+
+##### Attack vectors for local backup storage
+
+###### [Compromising remote system acting as local backup storage](javascript:void(0);)
+
+If you use local server as local backup storage, compromising this device will effectively give an attacker access to your backups and possibly data inside it.
+
+[Compromising your machine which has access to your local backup storage](javascript:void(0);)
+
+If an attacker compromises your machine, either via software or by physical presence, they may access your local backup storage, which may give them access to data from your other devices.
+
+#### Remote backup storage
 
 ## Requirements
 
