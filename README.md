@@ -3,6 +3,8 @@
 This guide has the following goals:
 - Automate secure installation of Arch Linux.
 - Document security best practices and processes around performing backups, using YubiKeys, operating Secure Boot etc. in a single place.
+- Provide optimal security against unauthorized access to online services you use.
+- Provide optimal security against unauthorized access to data on your devices.
 
 This guide is mainly targets developers and systemd administrators using Linux as daily operating system on their workstations, which either use or would like to use Arch Linux.
 
@@ -10,7 +12,100 @@ This guide is mainly targets developers and systemd administrators using Linux a
  1. [Requirements](#requirements)
  2. [Bootstrapping](#bootstrapping)
  3. [Day-2 Operations](#day-2-operations)
- 3. [Miscellaneous](#miscellaneous)
+ 4. [Miscellaneous](#miscellaneous)
+
+## Assumptions
+
+This section describes possible attack scenarios against the data which this guide tries to protect.
+
+### Security of your Daily Password Manager
+
+While assessing the security of your Daily Password Manager, we must consider 2 distinct circumstances. The first one is how you usually access your password manager. The second one is how attacker can get access to it.
+
+In the regular circumstances, your Daily Password Manager will be protected by the following factors:
+
+[Copy of your Daily Password Manager database file](#copy-of-your-daily-password-manager-database-file)
+
+This data will be stored on the following devices:
+
+- Any of your daily devices like laptop or mobile phone
+- Your local backup device
+- Your remote backup storage
+
+#
+
+[Your Master Password](#your-master-password)
+
+This password should never be written down or stored directly to make it harder to leak. Harder does not mean impossible, as for example, if you type your password on a compromised device (e.g. with software keylogger) or via hardware keylogger, your password will effectively be compromised. This is why it is important to only type your Master Password on trusted devices.
+
+#
+
+[Challenge Secret from your Hardware Security Module](#challenge-secret-from-your-hardware-security-module)
+
+Last factor required to get access to your password manager is a physical possession and physical presence of your Hardware Security Device, in this case YubiKey.
+
+E.g. if someone takes over your machine using remote control software, they won't be able to open your locked password manager.
+
+#
+
+An attacker may have additional ways of getting information from your password manager. This includes scenarios like:
+
+- Compromising your machine on software level (e.g. rogue software update), then accessing your password manager data on software level
+- Getting physical access to your unlocked machine with unlocked password manager.
+
+### Security of your online services
+
+The same 2 distinct circumstances applies to security of your online services. The first one is how you usually access your password manager. The second one is how attacker can get access to it.
+
+The security of online services you use will differ from service to service. All services are usually protected with the following measures:
+
+[High-entropy unique password](#high-entropy-unique-password)
+
+Using password manager allows you to use unique password for every service, with optimal level of entropy to make used password impossible to brute-force.
+
+#
+
+Some services over MFA authentication using the following mechanism:
+
+[OATH TOTP (Time-based One-Time Password)](#oath-totp-time-based-one-time-password)
+
+Most popular 2nd authentication factor (2FA). In this guide, TOTP secrets are stored on YubiKey and obtaining them requires physical touch of the device. This means if someone compromises your machine remotely, they won't be able to obtain codes required for logging in into the services.
+
+#
+
+Some services may also offer FIDO2 authentication. In such case, the protection is based on 2 factors:
+
+[Physical possession and presence of Hardware Security Module](#physical-possession-and-hardware-presence-of-hardware-security-module)
+
+YubiKey offers FIDO2 authentication, where secret key is stored on your YubiKey and touch is required to confirm physical presence.
+
+#
+
+[FIDO2 PIN (usually Master PIN)](#fido2-pin-usually-master-pin)
+
+As a second factor, PIN is used so even if someone steals your security key, they won't be able to use it to impersonate you.
+
+#
+
+When attacker wants to take over your online account, they have the following attack vectors:
+
+[Compromising your Daily Password Manager via software](#compromising-your-daily-password-manager-via-software)
+
+If an attacker gets remote access to your Daily Password Manager, they can then access all the services, which are not protected by MFA. Services protected with OATH-TOTP or FIDO2 should remain safe.
+
+[Compromising online service itself](#compromising-online-service-itself)
+
+If targeted online service itself is vulnerable to some attacks, exploiting such vulnerability may allow an attacker to take over your account in there.
+
+[Man-in-the-middle (MITM)](#man-in-the-middle)
+
+If network environment you work in is controlled by attacker, they may trick you into visiting their own version of service to trick you to send them your password. In such scenario, again, accounts using MFA should remain secure.
+
+[Phishing](#phishing)
+
+An attacker may try to trick you into telling them you own password. This scenario is also safe for accounts using MFA.
+
+### Security of your data
 
 ## Requirements
 
@@ -85,9 +180,11 @@ At the end of this section, you will have:
   - GPG AdminPIN
   - PIV PUK
   - YubiKey Challenge-Response secret
+  - Secure Boot Platform Key (PK)
+  - Secure Boot Key Encryption Key (KEK)
   - (Optional) Password salt
 - Both YubiKeys initialized with:
-  - Signing key (DB) for Secure boot via PIV applet.
+  - Signing key (DB) for Secure Boot via PIV applet.
   - GPG signing, encryption and authentication sub-keys via OpenPGP applet.
   - Challenge-Response on 2nd slot.
 - Recovery USB stick with personalized Arch Linux installer.
@@ -247,36 +344,112 @@ After successful disk restoration, you can unplug this USB device for now, we wi
 
 This section documents various processes, which are needed in daily use, like [Updating Kernel](#updating-kernel), [OS Installation](#os-installation) or handling [Lost YubiKey](#lost-yubikey).
 
-### OS Installation
+### Machine Maintenance
 
-### Booting up machine
+#### Booting up
 
-### Updating Kernel
+#### OS Installation
 
-### Lost YubiKey
+#### Updating system configuration and rebuilding Recovery ISO image
 
-### Damaged YubiKey
+#### Updating Kernel
 
-### Bootstrapping new hardware
+#### Bootstrapping new hardware
 
-### Signing someone else's GPG key
 
-### Storing MFA recovery tokens
+### YubiKey Maintenance
 
-### Updating system configuration and rebuilding Recovery ISO image
+#### Lost YubiKey
+
+In case when your YubiKey gets lost or stolen.
+
+#### Damaged YubiKey
+
+
+### Using Offline Backup Volume
+
+After initial bootstrapping, the following information is stored on your Offline Backup Volume:
+- GPG Master Key
+- Secure Boot Platform Key
+- Secure Boot Key Encryption Key
+
+#### Accessing
+
+#### Signing someone else's GPG key
+
+#### Storing MFA recovery tokens
+
+#### Extending expiry time of your GPG keys
+
+#### Updating
+
+In the following situations, you need to update the content of your Offline Backup Volume:
+- Rotation of Master Password
+
+  - Master Password
+  - PIN
+  - GPG AdminPIN
+  - PIV PUK
+  - YubiKey Challenge-Response secret
+  - Secure Boot Platform Key (PK)
+  - Secure Boot Key Encryption Key (KEK)
+  - (Optional) Password salt
+
+### Incident responses
+
+#### Rotating Master Password
+
+It is recommended to change your Master Password if the information protected by Master Password is compromised.
+
+In this guide, following data volumes are protected by Master Password:
+- Daily Password Manager
+- Offline Backup Volume
+
+Compromising any of this data volumes allows attacker to perform an offline attack on them, to eventually get access
+to the information inside.
+
+The time window to successfully attack such encrypted volume is a time where information inside is still considered safe.
+However, you may not know that the encrypted volume has leaked or you don't know what information an attacker alread have.
+For instance, an attacker may already have some idea what form your Master Password is, which reduces the attack window.
+
+If those volumes were not encrypted, attacker would have access to information inside immidiately (in 0 time).
+
+During this time window, it is recommended to rotate all your secrets stored on the volumes listed above, so when an attacker
+finally cracks them, they will no longer be useful.
+
+In this case, both data volumes are encrypted using AES-256. Assuming that the password has high enough entropy (AES-256 use 256 bits keys,
+so password should have at least 256 bits of entropy), the data should be considered safe from brute-force attacks, even if you consider growing
+computing power efficiency (doubles over ~3-5 years, so complexity decreases from 2^256 to 2^255 over ~3-5 years), raise of quantum computing (initial
+algoritms can reduce required computation complexity by half, so from 2^256 to 2^128) etc.
+
+#### Compromised Daily Password Manager file
+
+#### Compromised Offline Backup Volume
+
+In case of burglary into the location where Offline Backup Volumes are stored,
+
+#### Destroyed Offline Backup Volume
+
+#### Revoking your GPG sub-keys
+
+#### Restoring your Master Password from shards
 
 ## Miscellaneous
 
 This section contains useful information and notes not mentioned in the sections above.
 
+### Block-based backups vs File-based backups
+
+This guide prefers file-based backups
+
 ### Credentials which shouldn't be stored in [Daily Password Manager](#daily-password-manager)
 
 This section contains list of credentials which are recommended to not be stored in [Daily Password Manager](#daily-password-manager),
-as storing them there may have security implications.
+as storing them there may have security implications if password manager gets compromised.
 
-#### [2FA Recovery Codes](javascript:void(0);)
+#### [MFA Recovery Codes/Tokens](javascript:void(0);)
 
-It is not recommended to keep 2FA Recovery Codes in your Daily Password Manager, because if content of your Daily Password Manager leaks, it allows an attacker to bypass the requirement of your YubiKey to log in into 2FA enabled services.
+It is not recommended to keep MFA Recovery Codes in your Daily Password Manager, because if content of your Daily Password Manager leaks, it allows an attacker to bypass the requirement of your YubiKey to log in into 2FA enabled services. See [Storing MFA recovery tokens](#storing-mfa-recovery-tokens) section to learn how to safely store MFA Recovery Tokens.
 
 #
 
@@ -285,6 +458,73 @@ It is not recommended to keep 2FA Recovery Codes in your Daily Password Manager,
 If you add "salt" to passwords stored in Daily Password Manager for extra security, make sure the salt is not stored there too. This also applies when you re-use salt for some other purposes e.g. as a PIN for GPG/PIV.</dd>
 
 #
+
+#### [API Keys for services with MFA enabled](javascript:void(0);)
+
+If you protect access to certain service using MFA, but you store API keys with full privileges in your Daily Password Manager, this effectively breaks the purpose of using MFA, as obtaining the API key will effectively
+give an attacker full access to the service.
+
+#
+
+#### [Private keys](javascript:void(0);)
+
+Whenever possible, Hardware Security Module should be used to store your private keys instead of Daily Password Manager.
+
+#
+
+#### [Master Password and Master PIN](javascript:void(0);)
+
+Considering, that this information should never be digitally saved, it is best practice to not put those in your Password Manager either.
+
+This allows to treat those authorization factors as "something you know".
+
+#### [GPG AdminPIN and PIV PUK](javascript:void(0);)
+
+If one has access to your GPG AdminPIN or PIV PUK, they can try to brute-force your PIN and they may modify settings on your smartcard in case GPG AdminPIN.
+
+Also, if your Password Manager gets compromised (e.g. you leave unlocked machine with unlocked password manager), having a PUK or AdminPIN allows an evil actor
+to change the PIN on your security token, which effectively gives them access to your security token.
+
+However, if you lock your YubiKey, the only way to unlock it is when you get access to your Offline Backup Volume, which might not be very convinient.
+
+#### [BIOS Password](javascript:void(0);)
+
+The BIOS password protects your machine from executing malicious code and can be used by attacker to for example disable Secure Boot on your machine, which
+can trick you into getting your master password.
+
+### Credentials which can be stored in [Daily Password Manager](#daily-password-manager)
+
+Depending on your preference, here are the credentials, which you probably can store in your Daily Password Manager and it shouldn't in a sagnificant way
+degrade your level of security.
+
+### What this guide does not protect from
+
+#### Operating on compromised machine
+
+Considering the following facts:
+- Most likely Linux desktop machines are not a common target for malware.
+- Minimizing the damage from operating on a compromised machine is very inconvinient.
+- On a desktop machine, user data is most likely more valuable than system data.
+
+This guide only slightly reduces the damage in situation, where your machine gets compromised.
+
+Assuming that your machine gets compromised (e.g. via RCE vulnerability + privilege escalation),
+the following things happen:
+- All unencrypted data stored on this machine should be considered public.
+- All online services which do not use MFA should be considered compromised.
+- All online services which active sessions you have opened on your machine (browser, API keys etc),
+  should be considered compromised.
+- Your Master Password and Master PIN are most likely compromised.
+- Other systems where your machine has unattended access (e.g. Kubernetes clusters)
+
+Following information remains safe:
+- Your GPG identity, as it is protected by physical touch.
+- All online services which you do not have active sessions opened.
+
+#### Apartment theft
+
+If one breaks in into your apartment, ties you up and beats you up until you reveal your credentials to them,
+this guide most likely won't help you.
 
 ### Glossary
 
@@ -367,5 +607,17 @@ This guide assumes that you are platform owner, so as part of [Bootstrapping](#b
 #### [OS Recovery Volume](#os-recovery-volume)
 
 Removable device, which contains your personalized Arch Linux installer.
+
+#
+
+#### [MFA/2FA - Multi/Two Factor Authentication](#mfa-2fa-multi-two-factor-authentication)
+
+
+
+#
+
+#### [MFA Recovery Token](#mfa-recovery)
+
+
 
 #
