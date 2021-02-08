@@ -9,10 +9,11 @@ This guide has the following goals:
 This guide is mainly targets developers and systemd administrators using Linux as daily operating system on their workstations, which either use or would like to use Arch Linux.
 
 ## Table of Contents
- 1. [Requirements](#requirements)
- 2. [Bootstrapping](#bootstrapping)
- 3. [Day-2 Operations](#day-2-operations)
- 4. [Miscellaneous](#miscellaneous)
+ 1. [Assumptions](#assumptions)
+ 2. [Requirements](#requirements)
+ 3. [Bootstrapping](#bootstrapping)
+ 4. [Day-2 Operations](#day-2-operations)
+ 5. [Miscellaneous](#miscellaneous)
 
 ## Assumptions
 
@@ -151,7 +152,7 @@ With this guide all your disks are protected using Full Disk Encryption done wit
 
 ###### [Access to your disk](javascript:void(0);)
 
-This may sound obvious, but for accessing your encrypted data, either physical presence or authenticated network access must be satisfied to get access to your data. 
+This may sound obvious, but for accessing your encrypted data, either physical presence or authenticated network access must be satisfied to get access to your data.
 
 #
 
@@ -294,13 +295,23 @@ If an attacker compromises your machine, either via software or by physical pres
 
 This section describes what hardware/software is required to be able to make full use of this guide.
 
+### Detailed list
+
 Following hardware is required:
 
-#### [1 x (or more) x86 Computer with UEFI, Secure Boot and TPM support](javascript:void(0);)
+#### [1 x (or more) x86 Computer with UEFI support (and recommended Secure Boot and TPM support)](javascript:void(0);)
 
 This guides assumes you have personal machine which will be used for daily operation.
 The guide also supports customized installation for each machine if you have more than one.
 The machine can be as well a virtual machine, though this is not recommended from security point of view, as host machine may not be trusted.
+
+It is also helpful to actually have more than one machine available, so you can use other machine to help yourself with debugging if provisioning process of first machine fails for any reason.
+
+```diff
+- NOTE: Support for Secure Boot and TPM is highly recommended, without it your configuration will be less secure.
+```
+
+
 
 #
 
@@ -308,11 +319,13 @@ The machine can be as well a virtual machine, though this is not recommended fro
 
 For bootstrapping process, this guide requires you to have a machine running modern OS, from which you will be able to create a bootable USB stick with [Secure OS](#secure-os).
 
+Target machine can be used as well so long you already have some operating system running on it.
+
 #
 
-#### [2 x Hardware security device with PIV, OpenPGP and OATH - HOTP like ](javascript:void(0);)[YubiKey 5 Series](https://www.yubico.com/products/compare-yubikey-5-series/)
+#### [2 x Hardware security device with PIV, OpenPGP and OATH - HOTP support like ](javascript:void(0);)[YubiKey 5 Series](https://www.yubico.com/products/compare-yubikey-5-series/)
 
-The main point of this guide is to make use of hardware security device as much as possible. Two devices are required so one can be kept in secure place as a backup in case primary one is lost, stolen or damaged.
+The main point of this guide is to make use of hardware security device as much as possible. Two devices are required so one can be kept in secure place as a backup in case the primary one is lost, stolen or damaged.
 
 #
 
@@ -324,12 +337,18 @@ Those volumes may simply be encrypted pendrives.
 
 #
 
-#### [1 x (or more) dedicated removable storage device (e.g. pendrive) for a OS recovery volume](javascript:void(0);)
+#### [2 x dedicated removable storage device (e.g. pendrive) for a OS recovery volume](javascript:void(0);)
 
 This guide assumes data stored on daily computer is either version controlled, reproducible or regularly backed up into a local storage.
 This means it should be possible and it is recommended to be able to re-install the OS on machine at any time in a timely manner.
 To be able to do that, one should always keep a dedicated OS recovery volume, which is capable of performing fully automated OS installation.
-Having this possibiltiy allows not treating your workstation as [snowflake](#snowflake), giving you confidence, that when workstation breaks or gets stolen, you can quickly recover from it.
+Having this possibility allows not treating your workstation as [snowflake](#snowflake), giving you confidence, that when workstation breaks or gets stolen, you can quickly recover from it.
+
+```diff
+- NOTE: While 1 device should be sufficient for installation, it is recommended to have 2, so in case you have issues with new version of recovery volume, you can fallback to use old one.
+```
+
+
 
 #
 
@@ -345,11 +364,25 @@ Following [3-2-1 Backup Rule](#3-2-1-backup-rule) and to be able to quickly rest
 
 #
 
-#### [1 x Dedicated S3-compatible remote storage server (e.g. Minio instance, AWS S3) for remote backups](javascript:void(0);)
+#### [1 x Dedicated SSH remote storage server for remote backups](javascript:void(0);)
 
 Again, following [3-2-1 Backup Rule](#3-2-1-backup-rule), to keep your backups geographically secure, it is recommended to have a remote storage server for keeping another copy of your backups, in case when both active copy and local backup gets damaged (e.g. in apartment fire).
 
 #
+
+### Summary
+
+To summarize, following hardware is required for bootstrapping process:
+
+- 1 x x86 machine currently running modern OS
+- 2 x YubiKey 5 Series
+- 5 x 8GB+ pendrive (2 x backup + 1 x recovery + 1 x Secure OS + 1 x temporary)
+
+And additionally for day-2 operations:
+
+- 1 x 8GB+ pendrive for older version of recovery volume
+- 1 x Dedicated removable local storage device
+- 1 x Dedicated SSH-compatible remote storage server
 
 ## Bootstrapping
 
@@ -480,7 +513,7 @@ wget https://raw.githubusercontent.com/drduh/config/master/gpg.conf
 
 With all dependencies from the internet pulled, we can now reboot to make sure our OS has not been tampered and to make sure we stay in offline mode.
 
-When starting Tails, make sure you configure administator password and you disable network access.
+When starting Tails, make sure you configure administrator password and you disable network access.
 
 After the reboot, mount the temporary volume, unpack this repository and continue following the instruction.
 
@@ -592,10 +625,10 @@ Compromising any of this data volumes allows attacker to perform an offline atta
 to the information inside.
 
 The time window to successfully attack such encrypted volume is a time where information inside is still considered safe.
-However, you may not know that the encrypted volume has leaked or you don't know what information an attacker alread have.
+However, you may not know that the encrypted volume has leaked or you don't know what information an attacker already have.
 For instance, an attacker may already have some idea what form your Master Password is, which reduces the attack window.
 
-If those volumes were not encrypted, attacker would have access to information inside immidiately (in 0 time).
+If those volumes were not encrypted, attacker would have access to information inside immediately (in 0 time).
 
 During this time window, it is recommended to rotate all your secrets stored on the volumes listed above, so when an attacker
 finally cracks them, they will no longer be useful.
@@ -603,7 +636,7 @@ finally cracks them, they will no longer be useful.
 In this case, both data volumes are encrypted using AES-256. Assuming that the password has high enough entropy (AES-256 use 256 bits keys,
 so password should have at least 256 bits of entropy), the data should be considered safe from brute-force attacks, even if you consider growing
 computing power efficiency (doubles over ~3-5 years, so complexity decreases from 2^256 to 2^255 over ~3-5 years), raise of quantum computing (initial
-algoritms can reduce required computation complexity by half, so from 2^256 to 2^128) etc.
+algorithms can reduce required computation complexity by half, so from 2^256 to 2^128) etc.
 
 #### Compromised Daily Password Manager file
 
@@ -668,7 +701,7 @@ If one has access to your GPG AdminPIN or PIV PUK, they can try to brute-force y
 Also, if your Password Manager gets compromised (e.g. you leave unlocked machine with unlocked password manager), having a PUK or AdminPIN allows an evil actor
 to change the PIN on your security token, which effectively gives them access to your security token.
 
-However, if you lock your YubiKey, the only way to unlock it is when you get access to your Offline Backup Volume, which might not be very convinient.
+However, if you lock your YubiKey, the only way to unlock it is when you get access to your Offline Backup Volume, which might not be very convenient.
 
 #### [BIOS Password](javascript:void(0);)
 
@@ -677,7 +710,7 @@ can trick you into getting your master password.
 
 ### Credentials which can be stored in [Daily Password Manager](#daily-password-manager)
 
-Depending on your preference, here are the credentials, which you probably can store in your Daily Password Manager and it shouldn't in a sagnificant way
+Depending on your preference, here are the credentials, which you probably can store in your Daily Password Manager and it shouldn't in a significant way
 degrade your level of security.
 
 ### What this guide does not protect from
@@ -686,13 +719,14 @@ degrade your level of security.
 
 Considering the following facts:
 - Most likely Linux desktop machines are not a common target for malware.
-- Minimizing the damage from operating on a compromised machine is very inconvinient.
+- Minimizing the damage from operating on a compromised machine is very inconvenient.
 - On a desktop machine, user data is most likely more valuable than system data.
 
 This guide only slightly reduces the damage in situation, where your machine gets compromised.
 
 Assuming that your machine gets compromised (e.g. via RCE vulnerability + privilege escalation),
 the following things happen:
+
 - All unencrypted data stored on this machine should be considered public.
 - All online services which do not use MFA should be considered compromised.
 - All online services which active sessions you have opened on your machine (browser, API keys etc),
@@ -719,19 +753,19 @@ Password manager, which you use for every day logging in on your end devices lik
 
 #### [Offline Password Manager](#offline-password-manager)
 
-Password manager, stored on encrypted volume, which you only access from Live USB, which has no internet connection. It holds all critial credentials, which are not required during daily operation like AdminPIN, PUK, YubiKey PIV ManagementKey, Secure Boot Platform Key etc.
+Password manager, stored on encrypted volume, which you only access from Live USB, which has no internet connection. It holds all critical credentials, which are not required during daily operation like AdminPIN, PUK, YubiKey PIV ManagementKey, Secure Boot Platform Key etc.
 
 #
 
 #### [3-2-1 Backup Rule](#3-2-1-backup-rule)
 
-Backup rule saying you should always have at least **3** copies of your data, store **2** backup copies on different devices or storage media and keep at least **1** backup copy offsite.
+Backup rule saying you should always have at least **3** copies of your data, store **2** backup copies on different devices or storage media and keep at least **1** backup copy off-site.
 
 #
 
 #### [Snowflake](#snowflake)
 
-Snowflake is servers/machines, which configuration has drifted from original or automated configuration. Such drift is not desired, as configuration of such machines are hard to reproduce, which makes the recovery process harded when machine breaks.
+Snowflake is servers/machines, which configuration has drifted from original or automated configuration. Such drift is not desired, as configuration of such machines are hard to reproduce, which makes the recovery process harder when machine breaks.
 
 #
 
@@ -773,13 +807,13 @@ Accessing it's data should only be performed from [Secure OS](#secure-os) with n
 
 Top level X.509 certificate with RSA key-pair used in Secure Boot process.
 "Platform" in "Platform Key" refers to [Computing platform](https://en.wikipedia.org/wiki/Computing_platform), which can be
-an actual piece of hardware you execute code on, but can also be a virtualized environment or a web browser.
+an actual piece of hardware you execute code on, but can also be a visualized environment or a web browser.
 
 Owning Platform Private Key allows you to proof to the UEFI that you are the physical owner of the hardware.
 
 This trust is established by requiring physical presence to the unit (platform) to "take ownership", so to add initial PK.
 
-If the attacker poseses the Platform Private Key and access to the hardware, it does not give them direct access to execute code on the platform, as one needs to execute code, which will add a malicious public key to the signature database.
+If the attacker posses the Platform Private Key and access to the hardware, it does not give them direct access to execute code on the platform, as one needs to execute code, which will add a malicious public key to the signature database.
 
 Usually this key is populated with device manufacturer (OEM) key and it signs KEK keys, including Microsoft CA.
 
