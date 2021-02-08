@@ -35,9 +35,13 @@ This data will be stored on the following devices:
 - Your local backup device
 - Your remote backup storage
 
+#
+
 ##### [Your Master Password](#your-master-password)
 
 This password should never be written down or stored directly to make it harder to leak. Harder does not mean impossible, as for example, if you type your password on a compromised device (e.g. with software keylogger) or via hardware keylogger, your password will effectively be compromised. This is why it is important to only type your Master Password on trusted devices.
+
+#
 
 ##### [Challenge Secret from your Hardware Security Module](#challenge-secret-from-your-hardware-security-module)
 
@@ -51,17 +55,23 @@ E.g. if someone takes over your machine using remote control software, they won'
 + In case of brute-force attack, using HSM increases the entropy of the encryption key for the database.
 ```
 
+#
+
 #### Attack vectors for Daily Password Manager
 
 An attacker may have additional ways of getting information from your password manager. This includes scenarios like:
 
-##### [Compromising your machine on software level](javascript:void(0);)
+##### [Compromising your machine on software level](#compromising-your-machine-on-software-level)
 
 If an attacker manages to trick you into pulling rogue software update or running some rogue software on your machine, so they can take it over, they may then remotely access data in your password manager.
 
-[Getting physical access to your unlocked machine with unlocked password manager](javascript:void(0);)
+#
+
+##### [Getting physical access to your unlocked machine with unlocked password manager](#getting-physical-access-to-your-unlocked-machine-with-unlocked-password-manager)
 
 If an leave your machine unattended and unlocked your password manager can be easily compromised.
+
+#
 
 ### Security of your online services
 
@@ -71,7 +81,7 @@ The same 2 distinct circumstances applies to security of your online services. T
 
 The security of online services you use will differ from service to service. All services are usually protected with the following measures:
 
-##### High-entropy unique password
+##### [High-entropy unique password](#high-entropy-unique-password)
 
 Using password manager allows you to use unique password for every service, with optimal level of entropy to make used password impossible to brute-force.
 
@@ -79,7 +89,7 @@ Using password manager allows you to use unique password for every service, with
 
 Some services over MFA authentication using the following mechanism:
 
-##### OATH TOTP (Time-based One-Time Password)
+##### [OATH TOTP (Time-based One-Time Password)](#oath-totp-time-based-one-time-password)
 
 Most popular 2nd authentication factor (2FA). In this guide, TOTP secrets are stored on YubiKey and obtaining them requires physical touch of the device. This means if someone compromises your machine remotely, they won't be able to obtain codes required for logging in into the services.
 
@@ -87,13 +97,13 @@ Most popular 2nd authentication factor (2FA). In this guide, TOTP secrets are st
 
 Some services may also offer FIDO2 authentication. In such case, the protection is based on 2 factors:
 
-##### Physical possession and presence of Hardware Security Module
+##### [Physical possession and presence of Hardware Security Module](#physical-possession-and-presence-of-hardware-security-module)
 
 YubiKey offers FIDO2 authentication, where secret key is stored on your YubiKey and touch is required to confirm physical presence.
 
 #
 
-##### FIDO2 PIN (usually Master PIN)
+##### [FIDO2 PIN (usually Master PIN)](#fido2-pin-usually-master-pin)
 
 As a second factor, PIN is used so even if someone steals your security key, they won't be able to use it to impersonate you.
 
