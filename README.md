@@ -238,13 +238,13 @@ With mobile devices, we cannot have as sophisticated security settings as with P
 
 ##### Regular authentication methods for mobile built-in storage
 
-###### [Physical access](javascript:void(0);)
+###### [Physical access](#physical-access)
 
 Mobile devices cannot be decrypted remotely, so physical access to the device is required to get access to data stored on it.
 
 #
 
-###### [Encryption password](javascript:void(0);)
+###### [Encryption password](#encryption-password)
 
 Mobile device will have encryption password set, which is stored in the security module on device itself, which should protect it against brute-force attacks.
 
@@ -252,19 +252,19 @@ Mobile device will have encryption password set, which is stored in the security
 
 ##### Attack vectors for mobile built-in storage
 
-###### [Software remote attack](javascript:void(0);)
+###### [Software remote attack](#software-remote-attack)
 
 If your device is running vulnerable software and it's turned on, it might get exploited which will give an attacker remote access to your data.
 
 #
 
-###### [Extraction of encryption keys from memory](javascript:void(0);)
+###### [Extraction of encryption keys from memory](#extraction-of-encryption-keys-from-memory)
 
 Qualified attacker may also extract encryption keys from your device RAM, assuming it has physical access to your device, then use this encryption key to get access to your data.
 
 #
 
-###### [Physical access with fingerprint scan to your turned on and locked device](javascript:void(0);)
+###### [Physical access with fingerprint scan to your turned on and locked device](#physical-access-with-fingerprint-scan-to-your-turned-on-and-locked-device)
 
 If your device gets stolen locked and attacker will posses your fingerprint, they may get access to data stored on your device.
 
@@ -274,7 +274,7 @@ If your device gets stolen locked and attacker will posses your fingerprint, the
 
 #
 
-###### [Physical access to your unlocked device](javascript:void(0);)
+###### [Physical access to your unlocked device](#physical-access-to-your-unlocked-device)
 
 If an attacker manages to posses your mobile device unlocked (e.g. stealing it), they immediately get access to all your data.
 
@@ -286,35 +286,47 @@ Your local backup storage might be less secure than your PC disk, due to the fac
 
 ##### Regular authentication methods for local backup storage
 
-###### [Encryption key](javascript:void(0);)
+###### [Encryption key](#encryption-key)
 
 If your local backup storage is a portable disk, similar to PC disk protection, it will be protected using encrypted encryption key, which should be stored on all devices accessing your disk.
 
-###### [Hardware Security Module](javascript:void(0);)
+#
+
+###### [Hardware Security Module](#hardware-security-module)
 
 If your local backup storage is a portable disk, similar to PC disk protection, to decrypt encryption key of your device, you must have physical access to your YubiKey.
 
-###### [Master PIN](javascript:void(0);)
+#
+
+###### [Master PIN](#master-pin)
 
 If your local backup storage is a portable disk, similar to PC disk protection, to decrypt encryption key of your device, you must know your Master PIN.
 
 If your local backup storage is a remote system (e.g. local server), then you will use your Hardware Security Module and Master PIN to authenticate to this remote system.
 
+#
+
 ##### Special authentication methods for local backup storage
 
-###### [Recovery key](javascript:void(0);)
+###### [Recovery key](#recovery-key)
 
 This step is optional, but if you wish, you may generate a special recovery key which will be stored on your [Offline Backup Volume](#offline-backup-volume).
 
+#
+
 ##### Attack vectors for local backup storage
 
-###### [Compromising remote system acting as local backup storage](javascript:void(0);)
+###### [Compromising remote system acting as local backup storage](#compromising-remote-system-acting-as-local-backup-storage)
 
 If you use local server as local backup storage, compromising this device will effectively give an attacker access to your backups and possibly data inside it.
 
-###### [Compromising your machine which has access to your local backup storage](javascript:void(0);)
+#
+
+###### [Compromising your machine which has access to your local backup storage](#compromising-your-machine-which-has-access-to-your-local-backup-storage)
 
 If an attacker compromises your machine, either via software or by physical presence, they may access your local backup storage, which may give them access to data from your other devices.
+
+#
 
 #### Remote backup storage
 
@@ -322,27 +334,37 @@ With this guide, [BorgBackup](https://www.borgbackup.org/) is used for backups, 
 
 ##### Regular authentication methods for Borg
 
-###### [Hardware Security Module](javascript:void(0);)
+###### [Hardware Security Module](#hardware-security-module)
 
 As Borg performs remote backups over SSH protocol, access to backups will be authenticated the same way as backup to your server, which is, via GPG key stored on your YubiKey.
 
-###### [Master PIN](javascript:void(0);)
+#
+
+###### [Master PIN](#master-pin)
 
 In addition to your YubiKey, which stores private key, Master PIN is needed to be able to use the PIN. This ensures, that even if someone steals your YubiKey, they won't be able to use it.
 
-###### [Backup password](javascript:void(0);)
+#
+
+###### [Backup password](#backup-password)
 
 In addition to authentication mechanism for accessing remote storage, backups are also protected with static password, which is used to protect encryption keys of your backups. This means even if an attacker get access to your storage, they won't be able to read your backups.
 
+#
+
 ##### Special authentication methods for Borg
 
-###### [Master GPG Key](javascript:void(0);)
+###### [Master GPG Key](#master-gpg-key)
 
 If for any reason both your YubiKeys becomes unusable, you can still access your backups using copy of your authentication key in Master GPG keyring stored in [Offline Backup Volume](#offline-backup-volume).
 
-###### [Deployment SSH Keys](javascript:void(0);)
+#
+
+###### [Deployment SSH Keys](#deployment-ssh-keys)
 
 Depending on how you configure your remote server, you may have a special SSH key used only for configuring your server. If this is the case, make sure this SSH key is secure, as it will also allow accessing your backups.
+
+#
 
 ##### Attack vectors for remote backup storage with Borg
 
