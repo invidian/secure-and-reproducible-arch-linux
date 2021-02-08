@@ -17,11 +17,11 @@ This guide is mainly targets developers and systemd administrators using Linux a
 
 ## Assumptions
 
-This section describes possible attack scenarios against the data which this guide tries to protect.
+This section describes used security measures in designed setup and possible attack scenarios against the data which this guide tries to protect.
+
+Each of the protected resource is broken down into "regular" authentication method, special authentication method (if applicable) and possible attack vectors.
 
 ### Security of your Daily Password Manager
-
-While assessing the security of your Daily Password Manager, we must consider 2 distinct circumstances. The first one is how you usually access your password manager. The second one is how attacker can get access to it.
 
 #### Regular authentication methods for Daily Password Manager
 
@@ -51,16 +51,17 @@ E.g. if someone takes over your machine using remote control software, they won'
 + In case of brute-force attack, using HSM increases the entropy of the encryption key for the database.
 ```
 
-
-
-
-
 #### Attack vectors for Daily Password Manager
 
 An attacker may have additional ways of getting information from your password manager. This includes scenarios like:
 
-- Compromising your machine on software level (e.g. rogue software update), then accessing your password manager data on software level
-- Getting physical access to your unlocked machine with unlocked password manager.
+##### [Compromising your machine on software level](javascript:void(0);)
+
+If an attacker manages to trick you into pulling rogue software update or running some rogue software on your machine, so they can take it over, they may then remotely access data in your password manager.
+
+[Getting physical access to your unlocked machine with unlocked password manager](javascript:void(0);)
+
+If an leave your machine unattended and unlocked your password manager can be easily compromised.
 
 ### Security of your online services
 
@@ -275,7 +276,7 @@ If your local backup storage is a remote system (e.g. local server), then you wi
 
 ##### Special authentication methods for local backup storage
 
-[Recovery key](javascript:void(0);)
+###### [Recovery key](javascript:void(0);)
 
 This step is optional, but if you wish, you may generate a special recovery key which will be stored on your [Offline Backup Volume](#offline-backup-volume).
 
@@ -285,11 +286,41 @@ This step is optional, but if you wish, you may generate a special recovery key 
 
 If you use local server as local backup storage, compromising this device will effectively give an attacker access to your backups and possibly data inside it.
 
-[Compromising your machine which has access to your local backup storage](javascript:void(0);)
+###### [Compromising your machine which has access to your local backup storage](javascript:void(0);)
 
 If an attacker compromises your machine, either via software or by physical presence, they may access your local backup storage, which may give them access to data from your other devices.
 
 #### Remote backup storage
+
+With this guide, [BorgBackup](https://www.borgbackup.org/) is used for backups, but you may as well use [restic](https://restic.net/). Depending on the supported storage protocol you may favor one tool or another.
+
+##### Regular authentication methods for Borg
+
+###### [Hardware Security Module](javascript:void(0);)
+
+As Borg performs remote backups over SSH protocol, access to backups will be authenticated the same way as backup to your server, which is, via GPG key stored on your YubiKey.
+
+###### [Master PIN](javascript:void(0);)
+
+In addition to your YubiKey, which stores private key, Master PIN is needed to be able to use the PIN. This ensures, that even if someone steals your YubiKey, they won't be able to use it.
+
+###### [Backup password](javascript:void(0);)
+
+In addition to authentication mechanism for accessing remote storage, backups are also protected with static password, which is used to protect encryption keys of your backups. This means even if an attacker get access to your storage, they won't be able to read your backups.
+
+##### Special authentication methods for Borg
+
+###### [Master GPG Key](javascript:void(0);)
+
+If for any reason both your YubiKeys becomes unusable, you can still access your backups using copy of your authentication key in Master GPG keyring stored in [Offline Backup Volume](#offline-backup-volume).
+
+###### [Deployment SSH Keys](javascript:void(0);)
+
+Depending on how you configure your remote server, you may have a special SSH key used only for configuring your server. If this is the case, make sure this SSH key is secure, as it will also allow accessing your backups.
+
+##### Attack vectors for remote backup storage with Borg
+
+Attack vectors for remote backup storage with Borg are omitted, as they would be too complex to be feasible. An attacker would need to bypass almost all of your security measures to get access to your backups, it would probably be easier to get access to your personal device instead.
 
 ## Requirements
 
@@ -364,7 +395,7 @@ Following [3-2-1 Backup Rule](#3-2-1-backup-rule) and to be able to quickly rest
 
 #
 
-#### [1 x Dedicated SSH remote storage server for remote backups](javascript:void(0);)
+#### [1 x Dedicated remote storage server for remote backups (with SSH support for Borg or S3-like support for restic)](javascript:void(0);)
 
 Again, following [3-2-1 Backup Rule](#3-2-1-backup-rule), to keep your backups geographically secure, it is recommended to have a remote storage server for keeping another copy of your backups, in case when both active copy and local backup gets damaged (e.g. in apartment fire).
 
@@ -382,7 +413,7 @@ And additionally for day-2 operations:
 
 - 1 x 8GB+ pendrive for older version of recovery volume
 - 1 x Dedicated removable local storage device
-- 1 x Dedicated SSH-compatible remote storage server
+- 1 x Dedicated remote storage with either SSH or S3-like support
 
 ## Bootstrapping
 
