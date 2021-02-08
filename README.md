@@ -113,35 +113,47 @@ As a second factor, PIN is used so even if someone steals your security key, the
 
 When attacker wants to take over your online account, they have the following attack vectors:
 
-##### Compromising your Daily Password Manager via software
+##### [Compromising your Daily Password Manager via software](#compromising-your-daily-password-manager-via-software)
 
 If an attacker gets remote access to your Daily Password Manager, they can then access all the services, which are not protected by MFA. Services protected with OATH-TOTP or FIDO2 should remain safe.
 
-##### Getting physical access to your unlocked machine with unlocked password manager
+#
+
+##### [Getting physical access to your unlocked machine with unlocked password manager](#getting-physical-access-to-your-unlocked-machine-with-unlocked-password-manager-1)
 
 If you leave your machine unattended, including security key plugged in, an attacker with physical access may access all your accounts, **including ones protected with OATH-TOTP**. Only accounts protected using FIDO2 should remain safe, as they require Master PIN every time you authenticate.
 
 Do note, that an attacker with physical access may install a keylogger on your machine and trick you to provide your Master PIN, then again access your machine unattended and compromise all your accounts.
 
-##### Compromising online service itself
+#
+
+##### [Compromising online service itself](#compromising-online-service-itself)
 
 If targeted online service itself is vulnerable to some attacks, exploiting such vulnerability may allow an attacker to take over your account in there.
 
-##### Man-in-the-middle (MITM)
+#
+
+##### [Man-in-the-middle (MITM)](#man-in-the-middle-mitm)
 
 If network environment you work in is controlled by attacker, they may trick you into visiting their own version of service to trick you to send them your password. In such scenario, again, accounts using MFA should remain secure.
 
 In case of MITM attacks, an attacker may also try to steal your browser cookies, which will allow to access your account, bypassing authentication requirement.
 
-##### Phishing
+#
+
+##### [Phishing](#phishing)
 
 An attacker may try to trick you into telling them you own password. This scenario is also safe for accounts using MFA.
 
-##### Session hijacking
+#
+
+##### [Session hijacking](#session-hijacking)
 
 If online service is vulnerable to [XSS](https://en.wikipedia.org/wiki/Cross-site_scripting) vulnerability, they may try to trick you into clicking a link which opening will result in sending your session cookies to the attacker, so they can impersonate you bypassing the authentication.
 
 One can try to protect themselves against such attacks by disabling or conditionally enabling JavaScript on the websites you visit.
+
+#
 
 ### Security of your data
 
@@ -161,27 +173,31 @@ With this guide all your disks are protected using Full Disk Encryption done wit
 
 ##### Regular authentication methods for PC disks
 
-###### [Access to your disk](javascript:void(0);)
+###### [Access to your disk](#access-to-your-disk)
 
 This may sound obvious, but for accessing your encrypted data, either physical presence or authenticated network access must be satisfied to get access to your data.
 
 #
 
-###### [Encryption key](javascript:void(0);)
+###### [Encryption key](#encryption-key)
 
 For each of your disk there will be unique encryption key generated with entropy level, which makes brute-forcing such key infeasible. In regular use, this key will be additionally protected with GPG encryption.
 
 #
 
-###### [Master PIN](javascript:void(0);)
+###### [Master PIN](#master-pin)
 
 As your disk encryption key is encrypted, your GPG encryption key stored on YubiKey will be needed every time you need to decrypt your PC disk and in order to use your GPG encryption key, you must provide your Master PIN, which should only be stored in your memory.
 
-###### [Hardware Security Module](javascript:void(0);)
+#
+
+###### [Hardware Security Module](#hardware-security-module)
 
 As your disk encryption key is encrypted, your GPG encryption key stored on YubiKey will be needed every time you need to decrypt your PC disk.
 
-###### [TPM secret](javascript:void(0);)
+#
+
+###### [TPM secret](#tpm-secret)
 
 In addition to the encryption key, there will be a secret generated, which will be stored in TPM of your device. This ensures, that your data can only be accessed on your machine running your, trusted software.
 
@@ -189,7 +205,7 @@ In addition to the encryption key, there will be a secret generated, which will 
 
 ##### Special authentication methods for PC disks
 
-###### [Recovery key](javascript:void(0);)
+###### [Recovery key](#recovery-key)
 
 In addition to the authentication methods above, there will be secondary encryption key generated, which will be stored in [Offline Backup Volume](#offline-backup-volume). It can be used in the following situations:
 
@@ -204,13 +220,13 @@ In order to access the Recovery Key, you must first have access to Offline Backu
 
 ##### Attack vectors for PC disks
 
-###### [Software attack](javascript:void(0);)
+###### [Software attack](#software-attack)
 
 If your machine gets compromised via software, an attacker will effectively bypass the authentication and gets access to all your data.
 
 #
 
-###### [Physical access to your unlocked machine](javascript:void(0);)
+###### [Physical access to your unlocked machine](#physical-access-to-your-unlocked-machine)
 
 If you leave your machine unlocked, an attacker with physical access to it may access and dump all the data stored on it.
 
