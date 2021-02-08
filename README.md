@@ -298,7 +298,7 @@ If your local backup storage is a portable disk, similar to PC disk protection, 
 
 #
 
-###### [Master PIN](#master-pin)
+###### [Master PIN](#master-pin-1)
 
 If your local backup storage is a portable disk, similar to PC disk protection, to decrypt encryption key of your device, you must know your Master PIN.
 
@@ -340,7 +340,7 @@ As Borg performs remote backups over SSH protocol, access to backups will be aut
 
 #
 
-###### [Master PIN](#master-pin)
+###### [Master PIN](#master-pin-2)
 
 In addition to your YubiKey, which stores private key, Master PIN is needed to be able to use the PIN. This ensures, that even if someone steals your YubiKey, they won't be able to use it.
 
