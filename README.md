@@ -109,6 +109,12 @@ As a second factor, PIN is used so even if someone steals your security key, the
 
 #
 
+#### Special authentication methods for online services
+
+##### [MFA Recovery codes](#mfa-recovery-codes)
+
+In case you lose access to both of your YubiKeys, you should have special MFA recovery codes backed up on [Offline Backup Volume](#offlline-backup-volume), which should allow you to re-gain access to your account.
+
 #### Attack vectors for online services
 
 When attacker wants to take over your online account, they have the following attack vectors:
@@ -369,6 +375,23 @@ Depending on how you configure your remote server, you may have a special SSH ke
 ##### Attack vectors for remote backup storage with Borg
 
 Attack vectors for remote backup storage with Borg are omitted, as they would be too complex to be feasible. An attacker would need to bypass almost all of your security measures to get access to your backups, it would probably be easier to get access to your personal device instead.
+
+### Summary
+
+To summarize all describe attack vectors, here is the list of recommended best practices to follow:
+
+- Never leave your devices unattended unlocked.
+- If you leave your machine for longer period, hibernate it to remove disk encryption keys from memory.
+- Do not use your Master Password or Master PIN on untrusted hardware.
+- Keep your software up to date to protect it from known vulnerabilities.
+- Use VPN service on your devices, especially when working in untrusted network environment (e.g. Hotels).
+
+The list above lists behavior practices. Other best practices are more one-time, like:
+
+- Using unique passwords with at least 256 bits of entropy
+- Using FIDO2 where possible
+- Using U2F where possible
+- Using GPG keys where possible
 
 ## Requirements
 
@@ -649,16 +672,18 @@ This section documents various processes, which are needed in daily use, like [U
 
 #### Updating Kernel
 
+#### Updating BIOS
+
 #### Bootstrapping new hardware
 
 
 ### YubiKey Maintenance
 
-#### Lost YubiKey
+#### Adding new OATH-TOTP secret
 
-In case when your YubiKey gets lost or stolen.
+#### Provisioning new YubiKey
 
-#### Damaged YubiKey
+#### Unlocking locked Master PIN
 
 
 ### Using Offline Backup Volume
@@ -674,60 +699,65 @@ After initial bootstrapping, the following information is stored on your Offline
 
 #### Storing MFA recovery tokens
 
+When you register to new service where you use MFA and service generates recovery tokens for you, follow the following procedure:
+
+- Encrypt file containing recovery tokens using GPG with you as an recipient
+- Ensure you can decrypt encrypted data
+- Remove original file with plain-text recovery tokens
+- Transfer encrypted recovery tokens on temporary volume
+- Boot up Secure OS without network access
+- Plug in both of your Offline Backup Volume and access them
+- Store recovery tokens on both Offline Backup Volumes, either encrypted or decrypted
+
 #### Extending expiry time of your GPG keys
-
-#### Updating
-
-In the following situations, you need to update the content of your Offline Backup Volume:
-- Rotation of Master Password
-
-  - Master Password
-  - PIN
-  - GPG AdminPIN
-  - PIV PUK
-  - YubiKey Challenge-Response secret
-  - Secure Boot Platform Key (PK)
-  - Secure Boot Key Encryption Key (KEK)
-  - (Optional) Password salt
-
-### Incident responses
 
 #### Rotating Master Password
 
-It is recommended to change your Master Password if the information protected by Master Password is compromised.
+### Incident responses
 
-In this guide, following data volumes are protected by Master Password:
-- Daily Password Manager
-- Offline Backup Volume
+#### Compromised Daily Password Manager copy
 
-Compromising any of this data volumes allows attacker to perform an offline attack on them, to eventually get access
-to the information inside.
-
-The time window to successfully attack such encrypted volume is a time where information inside is still considered safe.
-However, you may not know that the encrypted volume has leaked or you don't know what information an attacker already have.
-For instance, an attacker may already have some idea what form your Master Password is, which reduces the attack window.
-
-If those volumes were not encrypted, attacker would have access to information inside immediately (in 0 time).
-
-During this time window, it is recommended to rotate all your secrets stored on the volumes listed above, so when an attacker
-finally cracks them, they will no longer be useful.
-
-In this case, both data volumes are encrypted using AES-256. Assuming that the password has high enough entropy (AES-256 use 256 bits keys,
-so password should have at least 256 bits of entropy), the data should be considered safe from brute-force attacks, even if you consider growing
-computing power efficiency (doubles over ~3-5 years, so complexity decreases from 2^256 to 2^255 over ~3-5 years), raise of quantum computing (initial
-algorithms can reduce required computation complexity by half, so from 2^256 to 2^128) etc.
-
-#### Compromised Daily Password Manager file
+#### Compromised Daily Password Manager content
 
 #### Compromised Offline Backup Volume
 
-In case of burglary into the location where Offline Backup Volumes are stored,
+#### Compromised machine running unauthorized code
 
-#### Destroyed Offline Backup Volume
+#### Compromised Master Password
+
+#### Compromised Master PIN
+
+#### Destroyed single Offline Backup Volume
+
+#### Destroyed both Offline Backup Volumes
+
+If both of your Offline Backup Volumes gets destroyed...
+
+#### Destroyed single YubiKey
+
+If one of your YubiKeys gets stolen or destroyed...
+
+#### Destroyed all YubiKeys
+
+If all your YubiKeys gets stolen or destroyed...
+
+#### Destroyed Disk encryption header
+
+If you damage your disk encryption header, e.g. using `dd` writing to your encrypted partition...
+
+#### Destroyed Disk encryption key
+
+If you remove your disk encryption key from boot partition...
+
+#### Destroyed TPM Secret
+
+If your machine gets damaged OR you accidentally wipe your TPM Secret...
 
 #### Revoking your GPG sub-keys
 
 #### Restoring your Master Password from shards
+
+#### A password gets compromised
 
 ## Miscellaneous
 
@@ -782,15 +812,19 @@ to change the PIN on your security token, which effectively gives them access to
 
 However, if you lock your YubiKey, the only way to unlock it is when you get access to your Offline Backup Volume, which might not be very convenient.
 
-#### [BIOS Password](javascript:void(0);)
+#### Disk encryption recovery keys
 
-The BIOS password protects your machine from executing malicious code and can be used by attacker to for example disable Secure Boot on your machine, which
-can trick you into getting your master password.
+To be decided.
 
 ### Credentials which can be stored in [Daily Password Manager](#daily-password-manager)
 
 Depending on your preference, here are the credentials, which you probably can store in your Daily Password Manager and it shouldn't in a significant way
 degrade your level of security.
+
+#### [BIOS Password](javascript:void(0);)
+
+The BIOS password protects your machine from executing malicious code and can be used by attacker to for example disable Secure Boot on your machine, which
+can trick you into getting your master password.
 
 ### What this guide does not protect from
 
@@ -822,52 +856,76 @@ Following information remains safe:
 If one breaks in into your apartment, ties you up and beats you up until you reveal your credentials to them,
 this guide most likely won't help you.
 
-### Glossary
+### AES-256 security
 
-#### [Daily Password Manager](#daily-password-manager)
+In this guide, following data volumes are protected by Master Password:
+
+- Daily Password Manager
+- Offline Backup Volume
+
+Compromising any of this data volumes allows attacker to perform an offline attack on them, to eventually get access
+to the information inside.
+
+The time window to successfully attack such encrypted volume is a time where information inside is still considered safe.
+However, you may not know that the encrypted volume has leaked or you don't know what information an attacker already have.
+For instance, an attacker may already have some idea what form your Master Password is, which reduces the attack window.
+
+If those volumes were not encrypted, attacker would have access to information inside immediately (in 0 time).
+
+In this case, both data volumes are encrypted using AES-256. Assuming that the password has high enough entropy (AES-256 use 256 bits keys,
+so password should have at least 256 bits of entropy), the data should be considered safe from brute-force attacks, even if you consider growing
+computing power efficiency (doubles over ~3-5 years, so complexity decreases from 2^256 to 2^255 over ~3-5 years), raise of quantum computing (initial
+algorithms can reduce required computation complexity by half, so from 2^256 to 2^128) etc.
+
+During this time window, it is recommended to rotate all your secrets stored on the volumes listed above, so when an attacker
+finally cracks them, they will no longer be useful. However, as time window size in such circumstances is enormously long, *not* rotating your secrets *should* not have an impact on your security.
+
+## Glossary
+
+### [Daily Password Manager](#daily-password-manager)
 
 Password manager, which you use for every day logging in on your end devices like laptop or smartphone. This guide use KeePassXC, as it supports YubiKeys as a factor for unlocking the password database.
 
 #
 
-#### [Offline Password Manager](#offline-password-manager)
+### [Offline Password Manager](#offline-password-manager)
 
 Password manager, stored on encrypted volume, which you only access from Live USB, which has no internet connection. It holds all critical credentials, which are not required during daily operation like AdminPIN, PUK, YubiKey PIV ManagementKey, Secure Boot Platform Key etc.
 
 #
 
-#### [3-2-1 Backup Rule](#3-2-1-backup-rule)
+### [3-2-1 Backup Rule](#3-2-1-backup-rule)
 
 Backup rule saying you should always have at least **3** copies of your data, store **2** backup copies on different devices or storage media and keep at least **1** backup copy off-site.
 
 #
 
-#### [Snowflake](#snowflake)
+### [Snowflake](#snowflake)
 
 Snowflake is servers/machines, which configuration has drifted from original or automated configuration. Such drift is not desired, as configuration of such machines are hard to reproduce, which makes the recovery process harder when machine breaks.
 
 #
 
-#### [Secure OS](#secure-os)
+### [Secure OS](#secure-os)
 
 Operating System focused on security and privacy, for example [Tails](https://tails.boum.org/).
 
 #
 
-#### [GPG Master Key](#gpg-master-key)
+### [GPG Master Key](#gpg-master-key)
 
 GPG Master Key is a main source of trust for your GPG identity.
 This key has only signing capabilities, it is used only to sign and revoke your [GPG sub-keys](#gpg-sub-keys) and it should only be stored on offline volumes to minimize the risk of leaking.
 
 #
 
-#### [GPG Sub-keys](#gpg-sub-keys)
+### [GPG Sub-keys](#gpg-sub-keys)
 
 GPG keys which are used on a daily basis. Usually it is a signing key, encryption key and authentication key. All 3 keys should be stored on Hardware security device.
 
 #
 
-#### [Master Password](#master-password)
+### [Master Password](#master-password)
 
 Master password is the only password you must remember when following this guide.
 This password is used for unlocking your daily password manager and to decrypt [Offline Backup Volumes](#offline-backup-volume).
@@ -875,14 +933,14 @@ This password should be long and complex to make sure it cannot be brute-forced.
 
 #
 
-#### [Offline Backup Volume](#offline-backup-volume)
+### [Offline Backup Volume](#offline-backup-volume)
 
 Offline Backup Volume is a local storage device (e.g. Pendrive), encrypted using [Master Password](#master-password), which contains all secrets like [GPG Master Key](#gpg-master-key), which must be kept secure at all cost.
 Accessing it's data should only be performed from [Secure OS](#secure-os) with no network access.
 
 #
 
-#### [Secure Boot Platform Key (PK)](#secure-boot-platform-key-pk)
+### [Secure Boot Platform Key (PK)](#secure-boot-platform-key-pk)
 
 Top level X.509 certificate with RSA key-pair used in Secure Boot process.
 "Platform" in "Platform Key" refers to [Computing platform](https://en.wikipedia.org/wiki/Computing_platform), which can be
@@ -900,19 +958,19 @@ This guide assumes that you are platform owner, so as part of [Bootstrapping](#b
 
 #
 
-#### [OS Recovery Volume](#os-recovery-volume)
+### [OS Recovery Volume](#os-recovery-volume)
 
 Removable device, which contains your personalized Arch Linux installer.
 
 #
 
-#### [MFA/2FA - Multi/Two Factor Authentication](#mfa-2fa-multi-two-factor-authentication)
+### [MFA/2FA - Multi/Two Factor Authentication](#mfa-2fa-multi-two-factor-authentication)
 
 
 
 #
 
-#### [MFA Recovery Token](#mfa-recovery)
+### [MFA Recovery Token](#mfa-recovery)
 
 
 
