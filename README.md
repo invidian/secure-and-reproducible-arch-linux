@@ -50,7 +50,7 @@ Last factor required to get access to your password manager is a physical posses
 E.g. if someone takes over your machine using remote control software, they won't be able to open your locked password manager.
 
 ```diff
-+ During regular operation, only possesion of your YubiKey make it possible to unlock the password database.
++ During regular operation, only possession of your YubiKey make it possible to unlock the password database.
 + Alternatively, one must additionally posses the secret used to configure the YubiKey.
 + In case of brute-force attack, using HSM increases the entropy of the encryption key for the database.
 ```
@@ -645,7 +645,7 @@ mkdir -p "$GNUPGHOME"
 chmod 0700 "$GNUPGHOME"
 ```
 
-Now, copy previosly downloaded `gpg.conf` file from temporary volume into working directory and run:
+Now, copy previously downloaded `gpg.conf` file from temporary volume into working directory and run:
 ```sh
 mv gpg.conf "$GNUPGHOME/"
 ```
@@ -780,20 +780,19 @@ It is not recommended to keep MFA Recovery Codes in your Daily Password Manager,
 
 #### [Password Salt](javascript:void(0);)
 
-If you add "salt" to passwords stored in Daily Password Manager for extra security, make sure the salt is not stored there too. This also applies when you re-use salt for some other purposes e.g. as a PIN for GPG/PIV.</dd>
+If you add "salt" to passwords stored in Daily Password Manager for extra security, make sure the salt is not stored there too. This also applies when you re-use salt for some other purposes e.g. as a PIN for GPG/PIV.
 
 #
 
 #### [API Keys for services with MFA enabled](javascript:void(0);)
 
-If you protect access to certain service using MFA, but you store API keys with full privileges in your Daily Password Manager, this effectively breaks the purpose of using MFA, as obtaining the API key will effectively
-give an attacker full access to the service.
+If you protect access to certain service using MFA, but you store API keys with full privileges in your Daily Password Manager, this effectively breaks the purpose of using MFA, as obtaining the API key will effectively give an attacker full access to the service.
 
 #
 
 #### [Private keys](javascript:void(0);)
 
-Whenever possible, Hardware Security Module should be used to store your private keys instead of Daily Password Manager.
+Whenever possible, Hardware Security Module should be used to store your private keys instead of Daily Password Manager. As an alternative, you may also use TPM to safely store your private keys. You can generate them using Offline Secure OS and then transfer to any machine where you are going to need them.
 
 #
 
@@ -801,7 +800,9 @@ Whenever possible, Hardware Security Module should be used to store your private
 
 Considering, that this information should never be digitally saved, it is best practice to not put those in your Password Manager either.
 
-This allows to treat those authorization factors as "something you know".
+This allows to treat those authorization factors really as "something you know".
+
+#
 
 #### [GPG AdminPIN and PIV PUK](javascript:void(0);)
 
@@ -812,9 +813,21 @@ to change the PIN on your security token, which effectively gives them access to
 
 However, if you lock your YubiKey, the only way to unlock it is when you get access to your Offline Backup Volume, which might not be very convenient.
 
+#
+
 #### Disk encryption recovery keys
 
-To be decided.
+Similar to situation with GPG AdminPIN and PIV PUK, storing Disk encryption recovery keys in your Daily Password Manager trades security for convenience. If an attacker compromises your Daily Password Manager (e.g. you leave unlocked machine with unlocked password manager), then they can look up your disk encryption recovery keys for other devices and get access on them later.
+
+In the real-world scenario, you will need recovery keys in the following situation:
+
+- Accidental BIOS update - If you update your BIOS without suspending the TPM requirement for disk encryption, then after the update your system will refuse to decrypt due to differences in PCR values in TPM.
+- Accessing data on another device - If your device gets damaged and you wish to access your data using e.g. USB adapter, then the only way to decrypt the disk is using recovery key.
+- Accessing data from insecure OS - If you wish to access your data from e.g. bootable USB device which is not Secure Boot signed for your machine, then you must use the recovery key.
+
+NOTE: The recovery key should be at least 55 uppercase, lowercase and number characters long to provide enough entropy against brute-force attacks, which might be a trouble for type by hand sometimes, though from my experience it's doable. If not, see [Old Android phone as Offline Password Manager](#old-android-phone-as-offline-password-manager).
+
+#
 
 ### Credentials which can be stored in [Daily Password Manager](#daily-password-manager)
 
@@ -826,7 +839,11 @@ degrade your level of security.
 The BIOS password protects your machine from executing malicious code and can be used by attacker to for example disable Secure Boot on your machine, which
 can trick you into getting your master password.
 
+#
+
 ### What this guide does not protect from
+
+This guide is designed to provide high level of security to rather low-profile people, which most likely won't be targeted by some organizations, so this section gives couple of examples in which scenarios this guide most likely won't provide sufficient security.
 
 #### Operating on compromised machine
 
@@ -844,8 +861,8 @@ the following things happen:
 - All online services which do not use MFA should be considered compromised.
 - All online services which active sessions you have opened on your machine (browser, API keys etc),
   should be considered compromised.
-- Your Master Password and Master PIN are most likely compromised.
-- Other systems where your machine has unattended access (e.g. Kubernetes clusters)
+- Your Master Password and Master PIN are most likely compromised, as attacker can record your keystrokes.
+- Other systems where your machine has unattended access (e.g. Kubernetes clusters).
 
 Following information remains safe:
 - Your GPG identity, as it is protected by physical touch.
@@ -868,7 +885,7 @@ to the information inside.
 
 The time window to successfully attack such encrypted volume is a time where information inside is still considered safe.
 However, you may not know that the encrypted volume has leaked or you don't know what information an attacker already have.
-For instance, an attacker may already have some idea what form your Master Password is, which reduces the attack window.
+For instance, an attacker may already have some idea what form your Master Password is, which reduces the attack window. Or an attacker may try to trick you to leak your Master Password, for example by using hardware keylogger.
 
 If those volumes were not encrypted, attacker would have access to information inside immediately (in 0 time).
 
@@ -877,8 +894,18 @@ so password should have at least 256 bits of entropy), the data should be consid
 computing power efficiency (doubles over ~3-5 years, so complexity decreases from 2^256 to 2^255 over ~3-5 years), raise of quantum computing (initial
 algorithms can reduce required computation complexity by half, so from 2^256 to 2^128) etc.
 
-During this time window, it is recommended to rotate all your secrets stored on the volumes listed above, so when an attacker
+In case of KeepassXC, which use HMAC-SHA1 slot in YubiKey, it generates additional ~150-170 bits of entropy added to your password, which is protected by hardware key.
+
+During time window, where attacker can try to brute-force the password, it is recommended to rotate all your secrets stored on the volumes listed above, so when an attacker
 finally cracks them, they will no longer be useful. However, as time window size in such circumstances is enormously long, *not* rotating your secrets *should* not have an impact on your security.
+
+### Old Android phone as Offline Password Manager
+
+[Credentials which shouldn't be stored in Daily Password Manager](#credentials-which-shouldnt-be-stored-indaily-password-manager) section highlighted which credentials shouldn't be stored in your Daily Password Manager from safety reasons. The only way to access those secrets is to boot Offline Secure OS, plug your Offline Backup Volume and get password from there. This might be not very convenient if you have limited number of devices available.
+
+As an alternative for Secure OS, you may consider using old Android phone without network configured and without SIM card as a simple offline password manager, which would have additional copy of your passwords you keep offline, protected by the same Master Password which is used to protect Offline Backup Volume. This should make it more convenient to access passwords stored there when needed.
+
+You could even try and modify your Android phone to act as a USB keyboard or use device like [InputStick](http://inputstick.com/) to avoid typing your password yourself.
 
 ## Glossary
 
