@@ -763,6 +763,21 @@ If your machine gets damaged OR you accidentally wipe your TPM Secret...
 
 This section contains useful information and notes not mentioned in the sections above.
 
+### Trying out this guide in virtualized environment
+
+You can try out most of the best practices described in this guide in virtualized environment e.g. using QEMU.
+
+Here is the breakdown of supported features:
+
+- QEMU supports UEFI boot with Secure Boot via OVMF.
+- QEMU supports emulating both TPM 1.2 and TPM 2 via [tpm2-tss](https://github.com/tpm2-software/tpm2-tss)
+- Emulation of YubiKey PIV applet is currently not supported. As an alternative, you can either:
+  - Do USB pass-through of your real YubiKey device to the virtual machine and use some unused slots for testing. YubiKey has 24 slots for certificates available, this guide uses only one for Secure Boot DB key pair.
+  - Use [tpm2-pkcs11](https://github.com/tpm2-software/tpm2-pkcs11) as a backend for PKCS#11 engine used by `sbsign`.
+- Emulation of YubiKey GPG smartcard applet is currently not supported either. For testing, you can:
+  - Do USB pass-through of your real YubiKey device to the virtual machine. This guide use all 3 GPG slots on YubiKey, so make sure you have a backup of your existing keys.
+  - Create a virtual disk which will be acting as your portable GPG keyring. Minimal extra steps will be required to get it to work, e.g. making sure virtual disk is mounted at time when GPG is required + additional environment variable to point to the right `$GNUPGHOME`.
+
 ### Block-based backups vs File-based backups
 
 This guide prefers file-based backups
@@ -836,10 +851,35 @@ degrade your level of security.
 
 #### [BIOS Password](javascript:void(0);)
 
-The BIOS password protects your machine from executing malicious code and can be used by attacker to for example disable Secure Boot on your machine, which
-can trick you into getting your master password.
+If an attacker has access to your machine, they may try to replace your `initramfs` with malicious one. However, Secure Boot protects against such scenario, as UEFI will refuse to boot unsigned `initramfs` as long as Secure Boot is enabled.
+
+If an attacker has both access to your machine and manages to bypass the BIOS password, they can disable Secure Boot and let their `initramfs` execute when you boot the machine again. This will allow them to hide from you, that Secure Boot has been disabled, which will allow them to obtain your Master PIN, as this is what you type into the machine when booting
+
+The BIOS password protects your machine from executing malicious code and can be used by attacker to for example disable Secure Boot on your machine, which can trick you into leaking your Master PIN.
+
+TODO: Check if replacing Platform Key changes BIOS TPM PCR measurements.
 
 #
+
+### Why Secure Boot keys do not require periodic rotation
+
+Even though Secure Boot use X.509 certificates, it's doing so to be able to identify certificates using UUID and to attach additional metadata to the certificates using e.g. `CommonName` field.
+
+Validity time fields are not used by Secure Boot implementations.
+
+In addition to that:
+
+- Both PK and KEK private keys are kept offline, so they compromise risk is greatly limited.
+- When encrypting data is transported over insecure medium (e.g. Internet), it is recommended to periodically rotate the encryption keys, so if attacker listening and recording the transmission manages to break the encryption key, they will only be able to access part of the transported data.
+- Signature private key is stored on Hardware Security Module, which eliminates the risk of private key being stolen.
+
+### Why does Secure Boot keys do not require respecting expiry time
+
+BIOS clock might be tampered (changed or reset), which would make Secure Boot to always fail, or BIOS clock can be corrected to always allow of use old Secure Boot keys. So to summarize, as clock cannot be trusted, it does not provide any real security, so it is ignored.
+
+### Technology used by this guide
+
+- TPM2 TOTP - To assert the unalteredness and trustworthiness of your device.
 
 ### What this guide does not protect from
 
@@ -901,7 +941,7 @@ finally cracks them, they will no longer be useful. However, as time window size
 
 ### Old Android phone as Offline Password Manager
 
-[Credentials which shouldn't be stored in Daily Password Manager](#credentials-which-shouldnt-be-stored-indaily-password-manager) section highlighted which credentials shouldn't be stored in your Daily Password Manager from safety reasons. The only way to access those secrets is to boot Offline Secure OS, plug your Offline Backup Volume and get password from there. This might be not very convenient if you have limited number of devices available.
+[Credentials which shouldn't be stored in Daily Password Manager](#credentials-which-shouldnt-be-stored-in-daily-password-manager) section highlighted which credentials shouldn't be stored in your Daily Password Manager from safety reasons. The only way to access those secrets is to boot Offline Secure OS, plug your Offline Backup Volume and get password from there. This might be not very convenient if you have limited number of devices available.
 
 As an alternative for Secure OS, you may consider using old Android phone without network configured and without SIM card as a simple offline password manager, which would have additional copy of your passwords you keep offline, protected by the same Master Password which is used to protect Offline Backup Volume. This should make it more convenient to access passwords stored there when needed.
 
