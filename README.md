@@ -826,7 +826,7 @@ If one has access to your GPG AdminPIN or PIV PUK, they can try to brute-force y
 Also, if your Password Manager gets compromised (e.g. you leave unlocked machine with unlocked password manager), having a PUK or AdminPIN allows an evil actor
 to change the PIN on your security token, which effectively gives them access to your security token.
 
-However, if you lock your YubiKey, the only way to unlock it is when you get access to your Offline Backup Volume, which might not be very convenient.
+However, if you lock your YubiKey by entering wrong PIN multiple times, the only way to unlock it is when you get access to your Offline Backup Volume, which might not be very convenient.
 
 #
 
@@ -844,6 +844,14 @@ NOTE: The recovery key should be at least 55 uppercase, lowercase and number cha
 
 #
 
+#### TPM Passwords
+
+Depending on TPM version on your hardware, you will either need to manage one or more passwords to configure TPM on each of your devices.
+
+For TPM1.2, there is only single owner password which is required for all TPM operations.
+
+With TPM 2.0, each hierarchy (group of objects) can be managed using separate password. This guide only stores few secrets in TPM.
+
 ### Credentials which can be stored in [Daily Password Manager](#daily-password-manager)
 
 Depending on your preference, here are the credentials, which you probably can store in your Daily Password Manager and it shouldn't in a significant way
@@ -853,11 +861,11 @@ degrade your level of security.
 
 If an attacker has access to your machine, they may try to replace your `initramfs` with malicious one. However, Secure Boot protects against such scenario, as UEFI will refuse to boot unsigned `initramfs` as long as Secure Boot is enabled.
 
-If an attacker has both access to your machine and manages to bypass the BIOS password, they can disable Secure Boot and let their `initramfs` execute when you boot the machine again. This will allow them to hide from you, that Secure Boot has been disabled, which will allow them to obtain your Master PIN, as this is what you type into the machine when booting
+If an attacker has both access to your machine and manages to bypass the BIOS password, they can disable Secure Boot and let their `initramfs` execute when you boot the machine again. This will allow them to hide from you, that Secure Boot has been disabled, which will allow them to obtain your Master PIN, as this is what you type into the machine when decrypting the hard drive.
 
-The BIOS password protects your machine from executing malicious code and can be used by attacker to for example disable Secure Boot on your machine, which can trick you into leaking your Master PIN.
+To protect against compromised BIOS, [tpm2-totp](https://github.com/tpm2-software/tpm2-totp) project is used, which will generate TOTP code using secret stored in TPM and will display it on encryption password prompt while booting. It is then user's responsibility to verify the code using other device.
 
-TODO: Check if replacing Platform Key changes BIOS TPM PCR measurements.
+The secret for `tpm2-totp` will be sealed against TPM PCR bank 7, which stores hash of the current state of Secure Boot configuration. If you replace any of Secure Boot keys like KEK or PK, the value will change, so you won't be able to generate valid TOTP code anymore. This means, if attacker replaces your Secure Boot keys with yours, you will notice that, as boot process won't be able to calculate valid TOTP code anymore.
 
 #
 
