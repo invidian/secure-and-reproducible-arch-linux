@@ -6,7 +6,7 @@ This guide has the following goals:
 - Provide optimal security against unauthorized access to online services you use.
 - Provide optimal security against unauthorized access to data on your devices.
 
-This guide is mainly targets developers and systemd administrators using Linux as daily operating system on their workstations, which either use or would like to use Arch Linux.
+This guide is mainly targets developers and system administrators using Linux as daily operating system on their workstations, which either use or would like to use Arch Linux.
 
 ## Table of Contents
  1. [Assumptions](#assumptions)
@@ -31,9 +31,9 @@ In the regular circumstances, your Daily Password Manager will be protected by t
 
 This data will be stored on the following devices:
 
-- Any of your daily devices like laptop or mobile phone
-- Your local backup device
-- Your remote backup storage
+- Any of your daily devices like laptop or mobile phone.
+- Your local backup device.
+- Your remote backup storage.
 
 #
 
@@ -69,13 +69,11 @@ If an attacker manages to trick you into pulling rogue software update or runnin
 
 ##### [Getting physical access to your unlocked machine with unlocked password manager](#getting-physical-access-to-your-unlocked-machine-with-unlocked-password-manager)
 
-If an leave your machine unattended and unlocked your password manager can be easily compromised.
+If you leave your machine unattended and unlocked, your password manager can be easily compromised.
 
 #
 
 ### Security of your online services
-
-The same 2 distinct circumstances applies to security of your online services. The first one is how you usually access your password manager. The second one is how attacker can get access to it.
 
 #### Regular authentication methods for online services
 
@@ -85,6 +83,13 @@ The security of online services you use will differ from service to service. All
 
 Using password manager allows you to use unique password for every service, with optimal level of entropy to make used password impossible to brute-force.
 
+```diff
++ Using unique password for each service ensures, that even if one password leaks in any way, only single service is affected by this. It prevents attacker from gaining access to your other accounts using the same password.
++ Using high-entropy passwords makes it almost impossible to brute-force. If attacker gets access to hashed version of your password, they won't be able to make use of it anyway.
+```
+
+
+
 #
 
 Some services over MFA authentication using the following mechanism:
@@ -92,6 +97,12 @@ Some services over MFA authentication using the following mechanism:
 ##### [OATH TOTP (Time-based One-Time Password)](#oath-totp-time-based-one-time-password)
 
 Most popular 2nd authentication factor (2FA). In this guide, TOTP secrets are stored on YubiKey and obtaining them requires physical touch of the device. This means if someone compromises your machine remotely, they won't be able to obtain codes required for logging in into the services.
+
+```diff
++ Using TOTP baked by hardware key protects your accounts if your machine gets compromised via software.
+```
+
+
 
 #
 
@@ -144,6 +155,8 @@ If targeted online service itself is vulnerable to some attacks, exploiting such
 If network environment you work in is controlled by attacker, they may trick you into visiting their own version of service to trick you to send them your password. In such scenario, again, accounts using MFA should remain secure.
 
 In case of MITM attacks, an attacker may also try to steal your browser cookies, which will allow to access your account, bypassing authentication requirement.
+
+Using VPN provides good protection against MITM attacks.
 
 #
 
@@ -215,10 +228,10 @@ In addition to the encryption key, there will be a secret generated, which will 
 
 In addition to the authentication methods above, there will be secondary encryption key generated, which will be stored in [Offline Backup Volume](#offline-backup-volume). It can be used in the following situations:
 
-- Your machine BIOS gets updated
-- You lose your encryption key
-- Your TPM gets wiped
-- Your machine gets damaged (e.g. access to TPM, but not HDD)
+- Your machine BIOS gets updated.
+- You lose your encryption key.
+- Your TPM gets wiped.
+- Your machine gets damaged (e.g. access to TPM, but not HDD).
 
 In order to access the Recovery Key, you must first have access to Offline Backup Volume described below.
 
@@ -282,7 +295,7 @@ If your device gets stolen locked and attacker will posses your fingerprint, the
 
 ###### [Physical access to your unlocked device](#physical-access-to-your-unlocked-device)
 
-If an attacker manages to posses your mobile device unlocked (e.g. stealing it), they immediately get access to all your data.
+If an attacker manages to posses your mobile device unlocked (e.g. stealing it), they immediately get access to all your data **and all online services you are logged into.** 
 
 #
 
@@ -388,10 +401,10 @@ To summarize all describe attack vectors, here is the list of recommended best p
 
 The list above lists behavior practices. Other best practices are more one-time, like:
 
-- Using unique passwords with at least 256 bits of entropy
-- Using FIDO2 where possible
-- Using U2F where possible
-- Using GPG keys where possible
+- Using unique passwords with at least 256 bits of entropy.
+- Using FIDO2 where possible.
+- Using U2F where possible.
+- Using GPG keys where possible.
 
 ## Requirements
 
@@ -439,7 +452,7 @@ Those volumes may simply be encrypted pendrives.
 
 #
 
-#### [2 x dedicated removable storage device (e.g. pendrive) for a OS recovery volume](javascript:void(0);)
+#### [2 x Dedicated removable storage device (e.g. pendrive) for a OS recovery volume](javascript:void(0);)
 
 This guide assumes data stored on daily computer is either version controlled, reproducible or regularly backed up into a local storage.
 This means it should be possible and it is recommended to be able to re-install the OS on machine at any time in a timely manner.
@@ -447,16 +460,16 @@ To be able to do that, one should always keep a dedicated OS recovery volume, wh
 Having this possibility allows not treating your workstation as [snowflake](#snowflake), giving you confidence, that when workstation breaks or gets stolen, you can quickly recover from it.
 
 ```diff
-- NOTE: While 1 device should be sufficient for installation, it is recommended to have 2, so in case you have issues with new version of recovery volume, you can fallback to use old one.
+- NOTE: While 1 device should be sufficient for installation, it is recommended to have 2, so in case you have issues with new version of recovery volume, you can fallback to use the old one.
 ```
 
 
 
 #
 
-#### [2 x Temporary removable storage device (e.g. pendrive) for booting Secure OS and temporary storage](javascript:void(0);)
+#### [1 x Temporary removable storage device (e.g. pendrive) for temporary storage](javascript:void(0);)
 
-As part of bootstrapping process and in case of some incidents, it is recommended to have two storage devices from which one can be formatted to allow installing Secure OS (e.g. Tails) on it and other to be able to store files when rebooting machine from OS connected to the internet to offline mode.
+As part of bootstrapping process and in case of some incidents, it is recommended to have one storage devices from which can be formatted to be able to store files when rebooting machine from OS connected to the internet to offline mode.
 
 #
 
@@ -478,11 +491,10 @@ To summarize, following hardware is required for bootstrapping process:
 
 - 1 x x86 machine currently running modern OS
 - 2 x YubiKey 5 Series
-- 5 x 8GB+ pendrive (2 x backup + 1 x recovery + 1 x Secure OS + 1 x temporary)
+- 5 x 8GB+ pendrive (2 x backup + 2 x recovery + 1 x temporary)
 
 And additionally for day-2 operations:
 
-- 1 x 8GB+ pendrive for older version of recovery volume
 - 1 x Dedicated removable local storage device
 - 1 x Dedicated remote storage with either SSH or S3-like support
 
@@ -511,40 +523,78 @@ At the end of this section, you will have:
 
 Before we start creating secrets etc, we must prepare some dependencies which will be needed later. Follow the steps below.
 
-#### Getting Tails
+#### Getting Arch Linux installation medium
 
-First step of bootstrapping is to get a Tails USB Stick created. We will use Tails without network configured for secrets generation.
+First step of bootstrapping is to get a Arch Linux USB Stick created. We will use it without network configured for secrets generation.
 
 For this step, following items are required from [Requirements](#requirements) section:
 - 1 x Temporary removable storage device (e.g. pendrive)
 - 1 x Temporary computer running Windows, Linux or macOS
 
-With items above prepared, head to [Download and install Tails](https://tails.boum.org/install/index.en.html) and prepare your USB stick.
+With items above prepared, head to [USB flash installation medium](https://wiki.archlinux.org/index.php/USB_flash_installation_medium) and prepare your USB stick.
 
-Before rebooting into Tails, make sure you remember an address of this guide, so you can continue following it there.
+Before rebooting, make sure you remember an address of this guide, so you can continue following it there.
 
-Once rebooting into Tails, make sure you configure your network.
+Once rebooted, make sure you configure your network before proceeding.
+
+##### Configuring Arch Linux ISO
+
+###### Connecting to the Wi-Fi
+
+If you know the name of your device and your network SSID, you can use the command below to authenticate to the network. Once done, connection should be established automatically and DHCP client should configure the rest automatically.
+
+```sh
+iwctl station <device> connect <ssid>
+```
+
+To find your wireless device names, run:
+
+```sh
+iwctl device list
+```
+
+To scan and list available networks, run:
+
+```sh
+iwctl station <device> scan && iwctl station <device> get-networks
+```
+
+###### Expanding available disk space
+
+To make some space if you need to install more packages, run the following command:
+
+```
+mount -o remount,size=4G /run/archiso/cowspace
+```
+
+NOTE: All packages will be installed into RAM, so make sure you have enough of it available. Depending on the age of your ISO, you may also need to install updates to make things working.
+
+NOTE: 4GB should be sufficient to install all updates, Gnome Shell and Firefox.
+
+###### Installing and running graphical interface
+
+If you want to have a graphical interface during bootstrapping, run the following commands:
+
+```sh
+pacman -Syyu gnome-shell gnome-terminal
+XDG_SESSION_TYPE=wayland dbus-run-session gnome-session
+```
+
+NOTE: This is only required to be done manually during bootstrapping process. Later on, your customized ISO may have it included out of the box.
 
 #### Fetching required resources into temporary volume
 
-With Tails running, we can fetch this repository, verify it's signature and run a script, which will pull all required dependencies into a temporary volume, so you can continue following bootstrapping process without internet access, to make sure generated secrets are not exposed to the internet.
+With Arch Linux USB stick running, we can fetch this repository, verify it's signature and run a script, which will pull all required dependencies into a temporary volume, so you can continue following bootstrapping process without the internet access, to make sure generated secrets are not exposed to the internet.
 
-##### (Optional) Formatting temporary volume
+##### Format and mount temporary volume
 
-If your pendrive is not formatted yet, use `Utilities -> Disks` application on Tails to select the right disk to format
-and create a filesystem on it.
-
-This step must be done only once and automating it in a secure way is complex, so doing it via UI is acceptable.
-
-##### Mount temporary volume
-
-With temporary volume formatted, use `Accessories -> Files` to mount it. Once mounted, right-click in the window and open
-the terminal in mounted location.
+Once running Arch, plug your temporary volume, format it if needed and mount it somewhere. Then make it your working directory.
 
 ##### Fetching repository
 
-Run the following command to import GPG signing public key, which was used to sign releases in this repository.
+Run the following command to import GPG signing public key, which is used to sign releases in this repository.
 This will allow to verify the signature of downloaded code.
+
 ```sh
 wget -O- https://github.com/invidian.gpg | gpg --import
 ```
@@ -587,16 +637,16 @@ cp /var/cache/apt/archives/*.deb ./
 ```
 Next, visit [Arch Linux Download page](https://archlinux.org/download/), find appropriate mirror for you and download latest Arch Linux ISO from it. We will use this ISO to build a personalized Arch Linux ISO, which will be much easier to do from Arch Linux itself.
 
-For example, run the following commands to download the ISO and the ISO signature from Worldwide mirror:
+For example, run the following commands to download the ISO and the ISO signature from the Worldwide mirror:
 ```sh
-export VERSION=2021.01.01
-wget http://mirror.rackspace.com/archlinux/iso/${VERSION}/archlinux-${VERSION}-x86_64.iso
-wget http://mirror.rackspace.com/archlinux/iso/${VERSION}/archlinux-${VERSION}-x86_64.iso.sig
+export VERSION=$(date +%Y.%m.01)
+wget https://mirror.rackspace.com/archlinux/iso/${VERSION}/archlinux-${VERSION}-x86_64.iso
+wget https://mirror.rackspace.com/archlinux/iso/${VERSION}/archlinux-${VERSION}-x86_64.iso.sig
 ```
 
 Next, we will download GPG Public Key which was used to create a signature, so we can verify it. You can do it with the following command:
 ```sh
-gpg --keyserver keyserver.ubuntu.com --recv-keys 0x4aa4767bbc9c4b1d18ae28b77f2d434b9741e8ac
+    gpg --keyserver keyserver.ubuntu.com --recv-keys 0x4aa4767bbc9c4b1d18ae28b77f2d434b9741e8ac
 ```
 
 Finally, verify the image with the command below:
@@ -632,7 +682,7 @@ First thing to do is to create and memorize your personal [Master Password]. It 
 
 With your new Master Password in mind, plug your USB devices which will serve as a [Offline Backup Volumes](#offline-backup-volume) and use `Utilities -> Disks` application on Tails to create a partition and **encrypted** filesystem on them.
 
-If you are short on USB slots, plug and format them one by one.
+If you are short on USB ports, plug and format them one by one.
 
 At the end, leave at least one device plugged, decrypt it and mount it, so we can save some files there.
 
@@ -657,6 +707,12 @@ With downloaded and verified Arch Linux ISO, you can now plug your USB device wh
 For simplicity, you can again use `Utilities -> Disks` application on Tails, select the right device, then open menu and select "Restore Disk Image" option there.
 
 After successful disk restoration, you can unplug this USB device for now, we will need it at latest stage.
+
+#### Next
+
+- How do you boot Secure OS with Secure Boot enabled?
+- How do you protect booting Recovery OS? Does it need to be protected?
+  - You can use `dm-verity` to generate hash of root filesystem, then add it to the kernel command line parameters with EFISTUB and sign it using Secure Boot Database Key.
 
 ## Day-2 Operations
 
@@ -878,7 +934,7 @@ Validity time fields are not used by Secure Boot implementations.
 In addition to that:
 
 - Both PK and KEK private keys are kept offline, so they compromise risk is greatly limited.
-- When encrypting data is transported over insecure medium (e.g. Internet), it is recommended to periodically rotate the encryption keys, so if attacker listening and recording the transmission manages to break the encryption key, they will only be able to access part of the transported data.
+- When encrypting data is transported over insecure medium (e.g. Internet, WiFi), it is recommended to periodically rotate the encryption keys, so if attacker listening and recording the transmission manages to break the encryption key, they will only be able to access part of the transported data.
 - Signature private key is stored on Hardware Security Module, which eliminates the risk of private key being stolen.
 
 ### Why does Secure Boot keys do not require respecting expiry time
@@ -888,6 +944,7 @@ BIOS clock might be tampered (changed or reset), which would make Secure Boot to
 ### Technology used by this guide
 
 - TPM2 TOTP - To assert the unalteredness and trustworthiness of your device.
+- Secure Boot - To prevent injecting and executing malicious code on your device at the bootloader/initramfs level.
 
 ### What this guide does not protect from
 
@@ -1018,7 +1075,7 @@ Accessing it's data should only be performed from [Secure OS](#secure-os) with n
 ### [Secure Boot Platform Key (PK)](#secure-boot-platform-key-pk)
 
 Top level X.509 certificate with RSA key-pair used in Secure Boot process.
-"Platform" in "Platform Key" refers to [Computing platform](https://en.wikipedia.org/wiki/Computing_platform), which can be
+"Platform" in "Platform Key" refers to a [Computing platform](https://en.wikipedia.org/wiki/Computing_platform), which can be
 an actual piece of hardware you execute code on, but can also be a visualized environment or a web browser.
 
 Owning Platform Private Key allows you to proof to the UEFI that you are the physical owner of the hardware.
