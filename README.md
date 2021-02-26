@@ -603,8 +603,8 @@ Then, run the commands below to fetch and verify this repository:
 
 ```sh
 VERSION=testing
-curl https://github.com/invidian/secure-and-reproducible-arch-linux/releases/download/${VERSION}/${VERSION}.tar.gz.asc -o ${VERSION}.tar.gz.asc
-curl https://github.com/invidian/secure-and-reproducible-arch-linux/archive/${VERSION}.tar.gz -o ${VERSION}.tar.gz
+curl -L https://github.com/invidian/secure-and-reproducible-arch-linux/releases/download/${VERSION}/${VERSION}.tar.gz.asc -o ${VERSION}.tar.gz.asc
+curl -L https://github.com/invidian/secure-and-reproducible-arch-linux/archive/${VERSION}.tar.gz -o ${VERSION}.tar.gz
 gpg --verify ${VERSION}.tar.gz.asc ${VERSION}.tar.gz
 ```
 
@@ -632,12 +632,10 @@ To learn more about this warning, read [Tails documentation about verifying imag
 Use Terminal opened in previous step or make sure you're in the temporary volume as a working directly and run the following commands to download the packages, which we will install once we go into offline mode.
 
 ```sh
-pacman -S hopenpgp-tools yubikey-personalization yubikey-manager
+pacman -S hopenpgp-tools yubikey-personalization yubikey-manager sssd
 mkdir packages
 cp /var/cache/pacman/pkg/* ./packages/
 ```
-Next, visit [Arch Linux Download page](https://archlinux.org/download/), find appropriate mirror for you and download latest Arch Linux ISO from it. We will use this ISO to build a personalized Arch Linux ISO, which will be much easier to do from Arch Linux itself.
-
 Next, download hardended GPG configuration we will use when generating GPG keys:
 ```sh
 curl https://raw.githubusercontent.com/drduh/config/master/gpg.conf -o gpg.conf
@@ -647,7 +645,7 @@ curl https://raw.githubusercontent.com/drduh/config/master/gpg.conf -o gpg.conf
 
 With all dependencies from the internet pulled, we can now reboot to make sure our OS has not been tampered and to make sure we stay in offline mode.
 
-Before you boot, unplug your Ethernet cable to make sure you don't get network configured automatically.
+Before you boot, ensure your Ethernet cable is unplugged to make sure you don't get network configured automatically.
 
 After the reboot, mount the temporary volume, unpack this repository and continue following the instruction.
 
@@ -665,12 +663,64 @@ Now we can proceed with the secrets generation.
 
 #### Master Password
 
-First thing to do is to create and memorize your personal [Master Password]. It will be used to protect your [Daily Password Manager](#daily-password-manager) and to decrypt [Offline Backup Volumes](#offline-backup-volume).
+First thing to do is to create and memorize your personal [Master Password](#master-password). It will be used to protect your [Daily Password Manager](#daily-password-manager) and to decrypt [Offline Backup Volumes](#offline-backup-volume) and this is the only password you will have to remember.
+
+This password should never be written down or saved to minimize the risk of it leaking.
+
+##### Recovery
+
+###### Sharding
+
+It is recommended to prepare for a situation, where you cannot remember the Master Password anymore or if anything happens to you, your family is able to get access to your data on your behalf.
+
+To do that securely, this guide recommends using [Shamir's Secret Sharing](https://en.wikipedia.org/wiki/Shamir%27s_Secret_Sharing) implemented with `ssss` CLI tool, which allows you to split your Master Password into 3 or 5 shares, which you can then distribute across your trusted family members, friends, lawyer or a bank. Only after gathering the majority of the shares, one will be able to reveal your Master Password.
+
+While Shamir's Secret Sharing has mixed opinions in terms of security and in certain scenarios it might be insecure, for such a rare use as recovery of the Master Password, it should be sufficient.
+
+You can generate your shares using the following command:
+
+```sh
+ssss-split -t 3 -n 5 -w your-name-master-password
+```
+
+Once you type your Master Password, it will print you 5 shares line by line, which you should securely distribute to your trusted family members, friends, lawyer or a bank.
+
+###### Distribution
+
+When sharing the shards with trusted parties, assume they may not be as technical as you, so make it clear what is a document you give them, under what conditions it should be used and how to use it. It may also include a list of all the parties who posses a shard to make a recovery process easier.
+
+###### Periodic verification
+
+Periodically, for example annually, you should verify with all the parties, that they still have access to their shards and that their contact information is actual. This is recommended to avoid situation, where in case of a need for recovery, you find out that majority of the shards is lost or certain parties are not reachable anymore.
+
+###### Rotating Master Password
+
+In case when you need to change your Master Password, all shards must be re-generated and re-distributed to all parties. Old shards should be destroyed in such scenario.
+
+###### Combining shards
+
+You can test the recovery process by executing the following command:
+
+```sh
+ssss-combine -t 3 -n 5
+```
+
+Now, provide 3 of 5 shards. As a result, you should see your Master Password being printed.
 
 
 #### Backup volumes
 
-With your new Master Password in mind, plug your USB devices which will serve as a [Offline Backup Volumes](#offline-backup-volume) and use `Utilities -> Disks` application on Tails to create a partition and **encrypted** filesystem on them.
+With your new Master Password, plug your USB devices which will serve as a [Offline Backup Volumes](#offline-backup-volume), then use the command below to identify plugged devices:
+
+```sh
+lsscsi --scsi_id --size
+```
+
+Last but one column should be the SCSI device ID, which we will use in next step.
+
+
+
+  use `Utilities -> Disks` application on Tails to create a partition and **encrypted** filesystem on them.
 
 If you are short on USB ports, plug and format them one by one.
 
