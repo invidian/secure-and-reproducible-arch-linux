@@ -432,7 +432,7 @@ It is also helpful to actually have more than one machine available, so you can 
 
 #### [1 x Temporary Computer running Linux, Windows or macOS](javascript:void(0);)
 
-For bootstrapping process, this guide requires you to have a machine running modern OS, from which you will be able to create a bootable USB stick with [Secure OS](#secure-os).
+For bootstrapping process, this guide requires you to have a machine running modern OS, from which you will be able to create a bootable USB stick with Arch Linux ISO.
 
 Target machine can be used as well so long you already have some operating system running on it.
 
@@ -596,15 +596,15 @@ Run the following command to import GPG signing public key, which is used to sig
 This will allow to verify the signature of downloaded code.
 
 ```sh
-wget -O- https://github.com/invidian.gpg | gpg --import
+curl https://github.com/invidian.gpg | gpg --import
 ```
 
 Then, run the commands below to fetch and verify this repository:
 
 ```sh
 VERSION=testing
-wget https://github.com/invidian/secure-and-reproducible-arch-linux/releases/download/${VERSION}/${VERSION}.tar.gz.asc
-wget https://github.com/invidian/secure-and-reproducible-arch-linux/archive/${VERSION}.tar.gz
+curl https://github.com/invidian/secure-and-reproducible-arch-linux/releases/download/${VERSION}/${VERSION}.tar.gz.asc -o ${VERSION}.tar.gz.asc
+curl https://github.com/invidian/secure-and-reproducible-arch-linux/archive/${VERSION}.tar.gz -o ${VERSION}.tar.gz
 gpg --verify ${VERSION}.tar.gz.asc ${VERSION}.tar.gz
 ```
 
@@ -632,42 +632,32 @@ To learn more about this warning, read [Tails documentation about verifying imag
 Use Terminal opened in previous step or make sure you're in the temporary volume as a working directly and run the following commands to download the packages, which we will install once we go into offline mode.
 
 ```sh
-sudo apt -y install --download-only wget gnupg2 gnupg-agent dirmngr cryptsetup scdaemon pcscd secure-delete hopenpgp-tools yubikey-personalization yubikey-manager
-cp /var/cache/apt/archives/*.deb ./
+pacman -S hopenpgp-tools yubikey-personalization yubikey-manager
+mkdir packages
+cp /var/cache/pacman/pkg/* ./packages/
 ```
 Next, visit [Arch Linux Download page](https://archlinux.org/download/), find appropriate mirror for you and download latest Arch Linux ISO from it. We will use this ISO to build a personalized Arch Linux ISO, which will be much easier to do from Arch Linux itself.
 
-For example, run the following commands to download the ISO and the ISO signature from the Worldwide mirror:
-```sh
-export VERSION=$(date +%Y.%m.01)
-wget https://mirror.rackspace.com/archlinux/iso/${VERSION}/archlinux-${VERSION}-x86_64.iso
-wget https://mirror.rackspace.com/archlinux/iso/${VERSION}/archlinux-${VERSION}-x86_64.iso.sig
-```
-
-Next, we will download GPG Public Key which was used to create a signature, so we can verify it. You can do it with the following command:
-```sh
-    gpg --keyserver keyserver.ubuntu.com --recv-keys 0x4aa4767bbc9c4b1d18ae28b77f2d434b9741e8ac
-```
-
-Finally, verify the image with the command below:
-```sh
-gpg --verify archlinux-${VERSION}-x86_64.iso.sig archlinux-${VERSION}-x86_64.iso
-```
-
-You should find output similar to the one above, including the warning.
-
 Next, download hardended GPG configuration we will use when generating GPG keys:
 ```sh
-wget https://raw.githubusercontent.com/drduh/config/master/gpg.conf
+curl https://raw.githubusercontent.com/drduh/config/master/gpg.conf -o gpg.conf
 ```
 
 #### Rebooting into offline mode
 
 With all dependencies from the internet pulled, we can now reboot to make sure our OS has not been tampered and to make sure we stay in offline mode.
 
-When starting Tails, make sure you configure administrator password and you disable network access.
+Before you boot, unplug your Ethernet cable to make sure you don't get network configured automatically.
 
 After the reboot, mount the temporary volume, unpack this repository and continue following the instruction.
+
+##### Installing dependencies offline
+
+Open terminal with temporary volume as your working directory, then run the command below to install all required packages:
+
+```sh
+pacman -U ./packages/*
+```
 
 ### Creating secrets
 
@@ -711,6 +701,7 @@ After successful disk restoration, you can unplug this USB device for now, we wi
 #### Next
 
 - How do you boot Secure OS with Secure Boot enabled?
+  - You don't. You boot Recovery OS instead.
 - How do you protect booting Recovery OS? Does it need to be protected?
   - You can use `dm-verity` to generate hash of root filesystem, then add it to the kernel command line parameters with EFISTUB and sign it using Secure Boot Database Key.
 
@@ -761,7 +752,7 @@ When you register to new service where you use MFA and service generates recover
 - Ensure you can decrypt encrypted data
 - Remove original file with plain-text recovery tokens
 - Transfer encrypted recovery tokens on temporary volume
-- Boot up Secure OS without network access
+- Boot up Offline Recovery Volume
 - Plug in both of your Offline Backup Volume and access them
 - Store recovery tokens on both Offline Backup Volumes, either encrypted or decrypted
 
@@ -863,7 +854,7 @@ If you protect access to certain service using MFA, but you store API keys with 
 
 #### [Private keys](javascript:void(0);)
 
-Whenever possible, Hardware Security Module should be used to store your private keys instead of Daily Password Manager. As an alternative, you may also use TPM to safely store your private keys. You can generate them using Offline Secure OS and then transfer to any machine where you are going to need them.
+Whenever possible, Hardware Security Module should be used to store your private keys instead of Daily Password Manager. As an alternative, you may also use TPM to safely store your private keys. You can generate them using Offline Recovery Volume and then transfer to any machine where you are going to need them.
 
 #
 
@@ -1006,9 +997,9 @@ finally cracks them, they will no longer be useful. However, as time window size
 
 ### Old Android phone as Offline Password Manager
 
-[Credentials which shouldn't be stored in Daily Password Manager](#credentials-which-shouldnt-be-stored-in-daily-password-manager) section highlighted which credentials shouldn't be stored in your Daily Password Manager from safety reasons. The only way to access those secrets is to boot Offline Secure OS, plug your Offline Backup Volume and get password from there. This might be not very convenient if you have limited number of devices available.
+[Credentials which shouldn't be stored in Daily Password Manager](#credentials-which-shouldnt-be-stored-in-daily-password-manager) section highlighted which credentials shouldn't be stored in your Daily Password Manager from safety reasons. The only way to access those secrets is to boot Offline Recovery Volume, plug your Offline Backup Volume and get password from there. This might be not very convenient if you have limited number of devices available.
 
-As an alternative for Secure OS, you may consider using old Android phone without network configured and without SIM card as a simple offline password manager, which would have additional copy of your passwords you keep offline, protected by the same Master Password which is used to protect Offline Backup Volume. This should make it more convenient to access passwords stored there when needed.
+As an alternative for Offline Recovery Volume, you may consider using old Android phone without network configured and without SIM card as a simple offline password manager, which would have additional copy of your passwords you keep offline, protected by the same Master Password which is used to protect Offline Backup Volume. This should make it more convenient to access passwords stored there when needed.
 
 You could even try and modify your Android phone to act as a USB keyboard or use device like [InputStick](http://inputstick.com/) to avoid typing your password yourself.
 
@@ -1038,9 +1029,9 @@ Snowflake is servers/machines, which configuration has drifted from original or 
 
 #
 
-### [Secure OS](#secure-os)
+### [Offline Recovery Volume](#offline-recovery-volume)
 
-Operating System focused on security and privacy, for example [Tails](https://tails.boum.org/).
+Recovery volume booted without network support.
 
 #
 
@@ -1068,7 +1059,7 @@ This password should be long and complex to make sure it cannot be brute-forced.
 ### [Offline Backup Volume](#offline-backup-volume)
 
 Offline Backup Volume is a local storage device (e.g. Pendrive), encrypted using [Master Password](#master-password), which contains all secrets like [GPG Master Key](#gpg-master-key), which must be kept secure at all cost.
-Accessing it's data should only be performed from [Secure OS](#secure-os) with no network access.
+Accessing it's data should only be performed from [Offline Recovery Volume](#offline-recovery-volume) with no network access.
 
 #
 
