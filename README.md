@@ -743,7 +743,7 @@ Now, run the commands below to create a new GPT partition table on your selected
 Now, let's create a LUKS container on partition we created using the command below:
 
 ```sh
-PARTITION=$(realpath $OBV_DEVICE)1
+export PARTITION=$(realpath $OBV_DEVICE)1
 test -b $PARTITION && \
   cryptsetup luksFormat --verbose --verify-passphrase --label $OBV_ID $PARTITION
 ```
@@ -757,14 +757,14 @@ cryptsetup open $PARTITION $OBV_ID
 Now, create a `ext4` filesystem using the following command:
 
 ```sh
-DEVICE=/dev/mapper/$OBV_ID
+export DEVICE=/dev/mapper/$OBV_ID
 test -b $DEVICE && mkfs.ext4 -L $OBV_ID $DEVICE
 ```
 
 And now mount it:
 
 ```sh
-MOUNTPOINT=/mnt/$OBV_ID
+export MOUNTPOINT=/mnt/$OBV_ID
 mkdir -p $MOUNTPOINT && mount $DEVICE $MOUNTPOINT
 ```
 
