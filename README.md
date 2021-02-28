@@ -713,14 +713,45 @@ Now, provide 3 of 5 shards. As a result, you should see your Master Password bei
 With your new Master Password, plug your USB devices which will serve as a [Offline Backup Volumes](#offline-backup-volume), then use the command below to identify plugged devices:
 
 ```sh
-lsscsi --scsi_id --size
+ls -d /dev/disk/by-id/* | grep -v -E -- '(-part[0-9]+|by-id/(dm|lvm|wwn|nvme-eui)-)'
 ```
 
-Last but one column should be the SCSI device ID, which we will use in next step.
+If you are unsure, which of your device is which, in care of removable devices, you can run the following command:
+
+```sh
+journalctl -fk | grep 'SerialNumber:'
+```
+
+Then unplug and plug your device. It should print you the serial number, which you can find in the list created by the command above.
+
+Once you identified your device, run the following command to make be able to automate remaining commands:
+
+```sh
+export OBV_DEVICE=<your full to device>
+export OFFLINE_BACKUP_VOLUME_ID=OBV1 # Paritition label is limited to N characters.
+```
+
+Now, run the commands below to create a new GPT partition table on your selected device and create one big partition on it:
+
+```sh
+parted --align=optimal $OBV_DEVICE \
+	mklabel gpt \
+	mkpart $OFFLINE_BACKUP_VOLUME_ID 0% 100% && partprobe $OBV_DEVICE
+```
+
+Now, let's create a LUKS container on partition we created using the command below:
+
+```sh
+PARTITION=$(realpath $OBV_DEVICE)1; test -b $PARTITION && cryptsetup luksFormat --verbose --verify-passphrase --label $OFFLINE_BACKUP_VOLUME_ID $PARTITION
+```
+
+Now we need to open created LUKS container to create a filesystem on it. This can be done with the command below:
+
+```sh
+cryptsetup open $PARTITION $OFFLINE_BACKUP_VOLUME_ID
+```
 
 
-
-  use `Utilities -> Disks` application on Tails to create a partition and **encrypted** filesystem on them.
 
 If you are short on USB ports, plug and format them one by one.
 
@@ -740,7 +771,7 @@ Now, copy previously downloaded `gpg.conf` file from temporary volume into worki
 mv gpg.conf "$GNUPGHOME/"
 ```
 
-##### Creating Arch Linux bootable USB device
+#### Creating Arch Linux bootable USB device
 
 With downloaded and verified Arch Linux ISO, you can now plug your USB device which you would like to use as an [OS Recovery Volume](#os-recovery-volume). For now we will write vanilla Arch Linux ISO on it to be able to create a customized version of it.
 
@@ -752,8 +783,16 @@ After successful disk restoration, you can unplug this USB device for now, we wi
 
 - How do you boot Secure OS with Secure Boot enabled?
   - You don't. You boot Recovery OS instead.
+    - Guarantees **Authenticity (identity)**.
 - How do you protect booting Recovery OS? Does it need to be protected?
   - You can use `dm-verity` to generate hash of root filesystem, then add it to the kernel command line parameters with EFISTUB and sign it using Secure Boot Database Key.
+    - Guarantees **integrity**.
+  - What about possible credentials stored on the image? Private keys for Wireguard installation network? WiFi password? If you encrypt, how do you decrypt?
+    - There should be no secrets stored on the image except the WiFi password, which is required to enable installation over local wireless network. An attacker with physical access to your Recovery Image, may have physical access to your Ethernet network anyway, if you do not have 802.1X configured on Ethernet level or additional physical protection on the Ethernet ports.
+      - Limiting/disabling DHCP does not offer any real security.
+      - MAC address filtering does not offer good security either, as MAC addresses can be spoofed. It may also be difficult to roll out on some devices.
+      - Security measures should be used on higher levels than MAC addresses (Layer 2) anyway to provide additional security for your network.
+    - Storing other types of secrets in Recovery Image is not supported right now with this guide. If this is what you really need, perhaps you need to replace the `archiso` in Recovery Image build process to perform regular Arch Linux installation, including disk encryption, similar to what we will be finally using, then configuring `overlayfs` combined with `tmpfs` or similar configuration and mount your root partition in read-only mode, to get ISO like environment which cannot be permanently modified while used.
 
 ## Day-2 Operations
 
