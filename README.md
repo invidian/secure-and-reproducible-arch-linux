@@ -734,7 +734,13 @@ export OBV_DEVICE=<your full to device>
 export OBV_ID=OBV1 # Paritition label is limited to N characters.
 ```
 
-Now, run the commands below to create a new GPT partition table on your selected device and create one big partition on it:
+Now, run the command below to examine the script which will create a new GPT partition table on your selected device and create one big partition on it:
+
+```sh
+cat ./scripts/partition-offline-backup-volume.sh
+```
+
+Once you confirm, that the script is safe to run, run it:
 
 ```sh
 ./scripts/partition-offline-backup-volume.sh
@@ -743,7 +749,7 @@ Now, run the commands below to create a new GPT partition table on your selected
 Now, let's create a LUKS container on partition we created using the command below:
 
 ```sh
-export PARTITION=$(realpath $OBV_DEVICE)1
+export PARTITION=/dev/disk/by-label/$OBV_ID
 test -b $PARTITION && \
   cryptsetup luksFormat --verbose --verify-passphrase --label $OBV_ID $PARTITION
 ```
@@ -778,6 +784,31 @@ To remove your device safely before unplugging, run the following commands:
 sync && \
 umount /mnt/$OBV_ID && \
 cryptsetup close /dev/mapper/$OBV_ID
+```
+
+##### Mounting secure volume again
+
+If you want to make your Offline Backup Volume available again, run the following commands to identify the right device:
+
+```sh
+ls -d /dev/disk/by-id/* | grep -v -E -- '(-part[0-9]+|by-id/(dm|lvm|wwn|nvme-eui)-)'
+journalctl -fk | grep 'SerialNumber:'
+```
+
+Now plug the device and export information about it:
+
+```sh
+export OBV_DEVICE=<your full to device>
+export OBV_ID=OBV1
+```
+
+And run commands below to decrypt and mount it:
+
+```sh
+export PARTITION=/dev/disk/by-label/$OBV_ID
+cryptsetup open $PARTITION $OBV_ID
+export MOUNTPOINT=/mnt/$OBV_ID
+mkdir -p $MOUNTPOINT && mount $DEVICE $MOUNTPOINT
 ```
 
 ##### Summary
