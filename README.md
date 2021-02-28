@@ -728,27 +728,27 @@ Once you identified your device, run the following command to make be able to au
 
 ```sh
 export OBV_DEVICE=<your full to device>
-export OFFLINE_BACKUP_VOLUME_ID=OBV1 # Paritition label is limited to N characters.
+export OBV_ID=OBV1 # Paritition label is limited to N characters.
 ```
 
 Now, run the commands below to create a new GPT partition table on your selected device and create one big partition on it:
 
 ```sh
-parted --align=optimal $OBV_DEVICE \
+test -b $OBV_DEVICE && parted --align=optimal $OBV_DEVICE \
 	mklabel gpt \
-	mkpart $OFFLINE_BACKUP_VOLUME_ID 0% 100% && partprobe $OBV_DEVICE
+	mkpart $OBV_ID 0% 100% && partprobe $OBV_DEVICE
 ```
 
 Now, let's create a LUKS container on partition we created using the command below:
 
 ```sh
-PARTITION=$(realpath $OBV_DEVICE)1; test -b $PARTITION && cryptsetup luksFormat --verbose --verify-passphrase --label $OFFLINE_BACKUP_VOLUME_ID $PARTITION
+PARTITION=$(realpath $OBV_DEVICE)1; test -b $PARTITION && cryptsetup luksFormat --verbose --verify-passphrase --label $OBV_ID $PARTITION
 ```
 
 Now we need to open created LUKS container to create a filesystem on it. This can be done with the command below:
 
 ```sh
-cryptsetup open $PARTITION $OFFLINE_BACKUP_VOLUME_ID
+cryptsetup open $PARTITION $OBV_ID
 ```
 
 
