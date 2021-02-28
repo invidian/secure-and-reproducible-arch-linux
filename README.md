@@ -749,7 +749,7 @@ Once you confirm, that the script is safe to run, run it:
 Now, let's create a LUKS container on partition we created using the command below:
 
 ```sh
-export PARTITION=/dev/disk/by-label/$OBV_ID
+export PARTITION=/dev/disk/by-partlabel/$OBV_ID
 test -b $PARTITION && \
   cryptsetup luksFormat --verbose --verify-passphrase --label $OBV_ID $PARTITION
 ```
