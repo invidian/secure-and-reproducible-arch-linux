@@ -735,8 +735,11 @@ Now, run the commands below to create a new GPT partition table on your selected
 
 ```sh
 test -b $OBV_DEVICE && parted --align=optimal $OBV_DEVICE \
+	print \
 	mklabel gpt \
-	mkpart $OBV_ID 0% 100% && partprobe $OBV_DEVICE
+	mkpart $OBV_ID 0% 100% \
+	print \
+	quit && partprobe $OBV_DEVICE
 ```
 
 Now, let's create a LUKS container on partition we created using the command below:
