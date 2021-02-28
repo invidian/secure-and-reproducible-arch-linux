@@ -783,6 +783,7 @@ To remove your device safely before unplugging, run the following commands:
 ```sh
 sync && \
 umount /mnt/$OBV_ID && \
+rmdir /mnt/$OBV_ID && \
 cryptsetup close /dev/mapper/$OBV_ID
 ```
 
