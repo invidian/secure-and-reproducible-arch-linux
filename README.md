@@ -805,7 +805,7 @@ export OBV_ID=OBV1
 And run commands below to decrypt and mount it:
 
 ```sh
-export PARTITION=/dev/disk/by-label/$OBV_ID
+export PARTITION=/dev/disk/by-partlabel/$OBV_ID
 cryptsetup open $PARTITION $OBV_ID
 export MOUNTPOINT=/mnt/$OBV_ID
 mkdir -p $MOUNTPOINT && mount $DEVICE $MOUNTPOINT
