@@ -734,24 +734,27 @@ export OBV_ID=OBV1 # Paritition label is limited to N characters.
 Now, run the commands below to create a new GPT partition table on your selected device and create one big partition on it:
 
 ```sh
-test -b $OBV_DEVICE && parted --align=optimal $OBV_DEVICE \
-	print \
-	mklabel gpt \
-	mkpart $OBV_ID 0% 100% \
-	print \
-	quit && partprobe $OBV_DEVICE
+./scripts/partition-offline-backup-volume.sh
 ```
 
 Now, let's create a LUKS container on partition we created using the command below:
 
 ```sh
-PARTITION=$(realpath $OBV_DEVICE)1; test -b $PARTITION && cryptsetup luksFormat --verbose --verify-passphrase --label $OBV_ID $PARTITION
+PARTITION=$(realpath $OBV_DEVICE)1
+test -b $PARTITION && \
+  cryptsetup luksFormat --verbose --verify-passphrase --label $OBV_ID $PARTITION
 ```
 
 Now we need to open created LUKS container to create a filesystem on it. This can be done with the command below:
 
 ```sh
 cryptsetup open $PARTITION $OBV_ID
+```
+
+Now, create a `ext4` filesystem using the following command:
+
+```sh
+mkfs.ext4 -L $OBV_ID /dev/mapper/$OBV_ID
 ```
 
 
