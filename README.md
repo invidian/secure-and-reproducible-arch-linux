@@ -707,8 +707,9 @@ ssss-combine -t 3 -n 5
 
 Now, provide 3 of 5 shards. As a result, you should see your Master Password being printed.
 
-
 #### Backup volumes
+
+##### Identifying plugged devices
 
 With your new Master Password, plug your USB devices which will serve as a [Offline Backup Volumes](#offline-backup-volume), then use the command below to identify plugged devices:
 
@@ -723,6 +724,8 @@ journalctl -fk | grep 'SerialNumber:'
 ```
 
 Then unplug and plug your device. It should print you the serial number, which you can find in the list created by the command above.
+
+##### Formatting
 
 Once you identified your device, run the following command to make be able to automate remaining commands:
 
@@ -754,14 +757,32 @@ cryptsetup open $PARTITION $OBV_ID
 Now, create a `ext4` filesystem using the following command:
 
 ```sh
-mkfs.ext4 -L $OBV_ID /dev/mapper/$OBV_ID
+DEVICE=/dev/mapper/$OBV_ID
+test -b $DEVICE && mkfs.ext4 -L $OBV_ID $DEVICE
 ```
 
+And now mount it:
 
+```sh
+MOUNTPOINT=/mnt/$OBV_ID
+mkdir -p $MOUNTPOINT && mount $DEVICE $MOUNTPOINT
+```
 
-If you are short on USB ports, plug and format them one by one.
+Now, you can repeat the steps above for your another recovery device.
 
-At the end, leave at least one device plugged, decrypt it and mount it, so we can save some files there.
+##### Safe removal
+
+To remove your device safely before unplugging, run the following commands:
+
+```sh
+sync && \
+umount /mnt/$OBV_ID && \
+cryptsetup close /dev/mapper/$OBV_ID
+```
+
+##### Summary
+
+When you are finished, leave at least one device plugged, decrypted, mounted and make it your working directory, so we can save some files there.
 
 #### Generating GPG Master Key
 
