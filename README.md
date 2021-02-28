@@ -632,9 +632,10 @@ To learn more about this warning, read [Tails documentation about verifying imag
 Use Terminal opened in previous step or make sure you're in the temporary volume as a working directly and run the following commands to download the packages, which we will install once we go into offline mode.
 
 ```sh
-pacman -S hopenpgp-tools yubikey-personalization yubikey-manager sssd
+pacman -S hopenpgp-tools yubikey-personalization yubikey-manager sssd git
 mkdir packages
 cp /var/cache/pacman/pkg/* ./packages/
+echo "TODO: Get 'yubico-piv-tool' tool!" && exit 1
 ```
 Next, download hardended GPG configuration we will use when generating GPG keys:
 ```sh
@@ -645,7 +646,11 @@ curl https://raw.githubusercontent.com/drduh/config/master/gpg.conf -o gpg.conf
 
 With all dependencies from the internet pulled, we can now reboot to make sure our OS has not been tampered and to make sure we stay in offline mode.
 
+##### Ensure you will be offline
+
 Before you boot, ensure your Ethernet cable is unplugged to make sure you don't get network configured automatically.
+
+##### Mounting temporary volume
 
 After the reboot, mount the temporary volume, unpack this repository and continue following the instruction.
 
@@ -809,14 +814,101 @@ And run commands below to decrypt and mount it:
 export PARTITION=/dev/disk/by-partlabel/$OBV_ID
 cryptsetup open $PARTITION $OBV_ID
 export MOUNTPOINT=/mnt/$OBV_ID
-mkdir -p $MOUNTPOINT && mount $DEVICE $MOUNTPOINT
+mkdir -p $MOUNTPOINT && mount /dev/mapper/$OBV_ID $MOUNTPOINT
 ```
+
+##### Initializing
+
+This guide use `git` to version content on your Offline Backup Volume. This allows:
+
+- Easy synchronization between multiple copies of Offline Backup Volume.
+- Versioning of generated secrets.
+- Improved integrity with Git checksums.
 
 ##### Summary
 
 When you are finished, leave at least one device plugged, decrypted, mounted and make it your working directory, so we can save some files there.
 
-#### Generating GPG Master Key
+#### Master PIN
+
+Similar to Master Password, you should create and memorize digits-only PIN number, which will be used while performing actions with your YubiKey. Similar to Master Password, this PIN number should never be written down or typed on insecure machines.
+
+PIN will be used for:
+
+- GPG Smartcard functionality
+- FIDO2 access
+
+#### Configuring YubiKeys
+
+##### Setting up HMAC-SHA1 Challenge-Response
+
+###### Generating access code
+
+From https://security.stackexchange.com/a/183951
+
+```sh
+(LC_ALL=C tr -dc '[:digit:]' < /dev/urandom | head -c12; echo) > yubikey-slot-2-hmac-sha1-challenge-response-access-code
+```
+
+###### Generating configuration
+
+TODO:
+
+- Breakdown flags here, from https://developers.yubico.com/yubico-pam/Authentication_Using_Challenge-Response.html
+
+```sh
+ykpersonalize -d -2 -ochal-resp -ochal-hmac -ohmac-lt64 -oserial-api-visible -oaccess=$(cat yubikey-slot-2-hmac-sha1-challenge-response-access-code) -c000000000000 -s yubikey-slot-2-hmac-sha1-challenge-response-configuration
+```
+
+###### Writing configuration to devices
+
+With configuration generated, plug each of your YubiKey and run the following command to apply generated configuration:
+
+```sh
+cat yubikey-slot-2-hmac-sha1-challenge-response-configuration | ykpersonalize -d -2 -c000000000000
+```
+
+##### Setting up PIV applet
+
+From https://developers.yubico.com/yubico-piv-tool/YubiKey_PIV_introduction.html
+
+###### Generating management key
+
+```sh
+export LC_CTYPE=C; dd if=/dev/urandom 2>/dev/null | tr -d '[:lower:]' | tr -cd '[:xdigit:]' | fold -w48 | head -1 > yubikey-piv-applet-management-key
+```
+
+###### Generating PUK
+
+```sh
+export LC_CTYPE=C; dd if=/dev/urandom 2>/dev/null | tr -cd '[:digit:]' | fold -w6 | head -1 > yubikey-piv-applet-puk
+```
+
+###### Setting PIN
+
+```sh
+yubico-piv-tool -achange-pin -P123456
+```
+
+##### Setting up GPG smartcard
+
+###### Setting Admin PIN
+
+To generate:
+
+```sh
+export LC_CTYPE=C; dd if=/dev/urandom 2>/dev/null | tr -cd '[:digit:]' | fold -w6 | head -1 > yubikey-gpg-smartcard-admin-pin
+```
+
+To configure PIN and Admin PIN, run the following command:
+
+```sh
+gpg --card-edit
+```
+
+#### Generating GPG keys
+
+##### Prepare GPG configuration
 
 Open Terminal and change working directory to one of Offline Backup Volumes. Then run the following commands:
 ```sh
@@ -825,10 +917,18 @@ mkdir -p "$GNUPGHOME"
 chmod 0700 "$GNUPGHOME"
 ```
 
-Now, copy previously downloaded `gpg.conf` file from temporary volume into working directory and run:
+Now, copy previously downloaded `gpg.conf` file into new GPG home directory by running command like:
 ```sh
-mv gpg.conf "$GNUPGHOME/"
+cp <path to temporary volume>/gpg.conf "$GNUPGHOME/"
 ```
+
+##### Generate keys
+
+##### Transfering keys into YubiKeys
+
+#### Generating Secure Boot keys
+
+##### Transferring Database Key into YubiKeys
 
 #### Creating Arch Linux bootable USB device
 
@@ -838,7 +938,7 @@ For simplicity, you can again use `Utilities -> Disks` application on Tails, sel
 
 After successful disk restoration, you can unplug this USB device for now, we will need it at latest stage.
 
-#### Next
+#### Q&A List
 
 - How do you boot Secure OS with Secure Boot enabled?
   - You don't. You boot Recovery OS instead.
