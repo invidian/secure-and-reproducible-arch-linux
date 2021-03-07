@@ -840,7 +840,6 @@ Use Terminal opened in previous step or make sure you're in the temporary volume
 pacman -S hopenpgp-tools yubikey-personalization yubikey-manager sssd git
 mkdir packages
 cp /var/cache/pacman/pkg/* ./packages/
-echo "TODO: Get 'yubico-piv-tool' tool!" && exit 1
 ```
 Next, download hardended GPG configuration we will use when generating GPG keys:
 ```sh
@@ -1154,6 +1153,20 @@ With configuration generated, plug each of your YubiKey and run the following co
 ykman otp --access-code $(cat yubikey-slot-1-hmac-sha1-challenge-response-access-code) chalresp 1 -t $(cat yubikey-slot-1-hmac-sha1-challenge-response-secret)
 ```
 
+###### Verifying Challenge-Response configuration
+
+To verify, that both of your YubiKeys are configured the same way, you can run the command below for each of them. If everything is correct, they should both produce the same output:
+
+```sh
+ykchalresp -1 'Sample #2'
+```
+
+Additionally, if you like, you can reproduce the YubiKey functionality using the command below:
+
+```sh
+echo -n 'Sample #2'  | openssl dgst -sha1 -mac HMAC -macopt hexkey:$(cat yubikey-slot-1-hmac-sha1-challenge-response-secret) | awk '{print $2}'
+```
+
 ##### Setting up PIV applet
 
 Next on the list is generation of the PIV applet, where we will store key pair with certificate, which will be used to sign the kernels for Secure Boot.
@@ -1200,9 +1213,9 @@ ykman piv change-puk --puk 12345678 --new-puk $(cat yubikey-piv-applet-puk)
 
 ###### Setting PIN
 
-Finally, we can set up PIN, which will be used to unlock the PIV applet after plugging it in. PIN, similar to [Master Password](#master-password) should never be written down, it should be only stored in your memory.
+Finally, we can set up PIN, which will be used to unlock the PIV applet after plugging it in. For PIN, you should use [Master PIN](#master-pin) mentioned above.
 
-Once you come up with PIN you're going to use, run the command below to configure it for each YubiKey:
+Run the command below to configure PIN on each YubiKey:
 
 ```sh
 ykman piv change-pin -P 123456
@@ -1212,21 +1225,43 @@ ykman piv change-pin -P 123456
 
 For now, we do not generate any secrets using PIV applet. This will be done at later stage when we generate Secure Boot keys.
 
-##### Setting up GPG smartcard
+##### Setting up OpenPGP applet
+
+This guide use GPG keys to protect main part of disk encryption keys, as well for signing Git objects. This means we need to configure OpenPGP applet on YubiKeys to act as a GPG smartcard.
 
 ###### Setting Admin PIN
 
-To generate:
+Similarly to PUK for PIV applet, OpenPGP applet has `Admin PIN`, which is used when you exceed your PIN attempts limit. To generate Admin PIN for your YubiKeys, run the command below:
+
+**NOTE: This command will print your Admin PIN to the screen, so you can copy-paste it in the next step when configuring it. Make sure your display output is secure.**
 
 ```sh
-export LC_CTYPE=C; dd if=/dev/urandom 2>/dev/null | tr -cd '[:digit:]' | fold -w6 | head -1 > yubikey-gpg-smartcard-admin-pin
+export LC_CTYPE=C; dd if=/dev/urandom 2>/dev/null | tr -cd '[:digit:]' | fold -w8 | head -1 | tee yubikey-gpg-smartcard-admin-pin
 ```
 
-To configure PIN and Admin PIN, run the following command:
+If you use graphical interface, make sure you copy your Admin PIN to clipboard before proceeding. It will be required for the next step.
+
+To configure Admin PIN, run the following command:
 
 ```sh
-gpg --card-edit
+gpg --change-pin
 ```
+
+Now, select option `3.` to change Admin PIN.
+
+You will be prompted for the existing Admin PIN, which by default is `12345678`.
+
+###### Setting PIN
+
+Now, you can configure your regular PIN using [Master PIN](#master-pin). To do that, run the command below:
+
+```sh
+gpg --change-pin
+```
+
+And select option `1.` to change your PIN.
+
+You will be prompted for the existing PIN, which by default is `123456`.
 
 ##### Configuring and securing other YubiKey applets
 
@@ -1247,10 +1282,339 @@ chmod 0700 "$GNUPGHOME"
 
 Now, copy previously downloaded `gpg.conf` file into new GPG home directory by running command like:
 ```sh
-cp <path to temporary volume>/gpg.conf "$GNUPGHOME/"
+export TEMPORARY_VOLUME=<path to temporary volume>
+cp $TEMPORARY_VOLUME/gpg.conf $GNUPGHOME/
 ```
 
+Now you can run the command below to initialize the GPG database to verify the configuration:
+
+```sh
+gpg --list-keys
+```
+
+If successful, it should create few new files in `gnupg-workspace` directory.
+
 ##### Generate keys
+
+###### Generating Master Key
+
+First thing to do is to generate Master Key, which will be stored only on Offline Secure Volume. To do that, run the command below:
+
+```sh
+gpg --expert --full-generate-key
+```
+
+Now, select option:
+
+```
+ECC (set your own capabilities)
+```
+
+We use ECC as it is recommended algorithm nowadays.
+
+Now, type `S`  to leave only `Certify` capability selected:
+
+```sh
+S
+```
+
+Then type `Q` to confirm the selection:
+
+```sh
+Q
+```
+
+Next, select `1` elliptic curve option. YubiKey supports `Curve 25519` and `secp256k1` and ``Curve 25519`` is more commonly used:
+
+```sh
+(1) Curve 25519
+```
+
+Choose that Master Key should never expire:
+
+```sh
+0
+y
+```
+
+Next, type your real name which will be used as an human-readable identifier for your key.
+
+```sh
+John Doe
+```
+
+Then type your email address:
+
+```sh
+john.doe@example.com
+```
+
+**Now leave the `Comment` section empty, as this is [considered](http://web.archive.org/web/20200604060421/https://debian-administration.org/users/dkg/weblog/97) best practice.**
+
+If everything you typed is correct, confirm with `o`:
+
+```sh
+o
+```
+
+Now, GPG will ask you to provide the passphrase for the key. Considering that by following this guide your GPG Master Key will be always kept offline and protected using your Master Password, it should be OK to leave the password blank.
+
+After confirmation of empty password, your GPG key ID should be printed.
+
+Copy the Key ID in `0x...` format and run the command below to make it available for other commands:
+
+```sh
+export KEYID=0xEAF8E1976169CB20
+```
+
+###### (Optional) Adding extra identities to your Master Key
+
+If you have more than one username or email address, which you would like to associate with your new Master Key, you can add them using the command below:
+
+```sh
+gpg --edit-key $KEYID
+```
+
+Now, type `adduid`:
+
+```sh
+adduid
+```
+
+Type the details as explained above.
+
+Finally, confirm with `o`:
+
+```sh
+o
+```
+
+You can repeat this process for as many identities as you have.
+
+**Note: Added identities will be available to everyone, so make deliberate decision if you like to have those IDs being public information.**
+
+Finally, type `save` to commit the changes:
+
+```sh
+save
+```
+
+###### Generating Signing key
+
+Next key we need to generate is a Signing key, which will be used to sign information you generate like emails or git objects to proof they are coming from you. This key will be stored on YubiKey, but to be able to use the same key on both YubiKeys for redundancy, it must be generated offline, then transferred into both YubiKeys.
+
+To generate the key, run the command below:
+
+```sh
+gpg --expert --edit-key $KEYID
+```
+
+Then, type `addkey`:
+
+```sh
+addkey
+```
+
+Select `(10) ECC (sign only)` kind of key:
+
+```sh
+10
+```
+
+And curve `(1) Curve 25519` as explained above:
+
+```sh
+1
+```
+
+Now, it is recommended to renew your keys yearly, to ensure you still have access to your Master Key, so select 1 year of expiration time:
+
+```sh
+1y
+```
+
+Finally, commit the result by using:
+
+```sh
+save
+```
+
+Signing key can also be saved without password, as it will be transferred into YubiKey anyway.
+
+###### Generating Encryption key
+
+Next key to generate is Encryption key, which will be used to encrypt the data which only you will be able to decrypt. The procedure is almost identical to generating Signing key.
+
+To generate the key, run the command below:
+
+```sh
+gpg --expert --edit-key $KEYID
+```
+
+Then, type `addkey`:
+
+```sh
+addkey
+```
+
+Select `(12) ECC (encrypt only)` kind of key:
+
+```sh
+12
+```
+
+And curve `(1) Curve 25519` as explained above:
+
+```sh
+1
+```
+
+Again, select `1y` expiration time as explained above:
+
+```sh
+1y
+```
+
+Finally, commit the result by using:
+
+```sh
+save
+```
+
+Encryption key can also be saved without password, as it will be transferred into YubiKey anyway.
+
+###### Generating Authentication Key
+
+Last key we will generate is Authentication key. This key is used when you log in into remote servers to prove your identity. This can can be used for example for logging in using SSH. GPG also supports TLS authentication.
+
+To generate the key, run the command below:
+
+```sh
+gpg --expert --edit-key $KEYID
+```
+
+Then, type `addkey`:
+
+```sh
+addkey
+```
+
+Now, depending on the services you are going to use your authentication key, you may select either `ECC` key (recommended) or older `RSA` key. Note, that some cloud providers like AWS do not support ECC key types at the time of writing. However, if you still prefer to use ECC key with GPG, you can generate additional RSA key using PIV applet, which you can use for "legacy" services.
+
+If you select `(12) ECC (encrypt only)` kind of key, type:
+
+```sh
+11
+```
+
+Enable Authenticate capability:
+
+```sh
+A
+```
+
+Disable Sign capability:
+
+```sh
+S
+```
+
+Confirm selection:
+
+```sh
+Q
+```
+
+Then select curve `(1) Curve 25519` as explained above:
+
+```sh
+1
+```
+
+If you select `(8) RSA (set your own capabilities)`, type:
+
+```sh
+8
+```
+
+Enable Authenticate capability:
+
+```sh
+A
+```
+
+Disable Sign capability:
+
+```sh
+S
+```
+
+Disable Encrypt capability:
+
+```sh
+E
+```
+
+Confirm selection:
+
+```sh
+Q
+```
+
+Now choose `4096` as key length:
+
+```sh
+4096
+```
+
+Similarly to other keys, select `1y` expiration time:
+
+```sh
+1y
+```
+
+Finally, commit the result by using:
+
+```sh
+save
+```
+
+Encryption key can also be saved without password, as it will be transferred into YubiKey anyway.
+
+###### (Optional) Signing new Master Key with your existing key
+
+If you already use GPG and you want to switch to use key which is stored on YubiKey, it is recommended to sign your new Master Key with your existing Master Key to proof to people trusting your existing key that this newly generated key belongs to you.
+
+To do that, export your new public key using the command below:
+
+```sh
+gpg --export --armor $KEYID > $TEMPORARY_VOLUME/$KEYID.gpg
+```
+
+Now, unmount your temporary volume, plug it to machine where you have your existing master key available and use the command below to sign new key:
+
+```sh
+export NEW_KEY_ID=<KEYID from other machine>
+gpg --sign-with EXISTING_KEY_ID --sign-key $NEW_KEY_ID
+```
+
+When it's done, you can export your new master key with new signature and copy it back onto temporary volume, so it can be imported on Offline Secure Volume.
+
+```sh
+gpg --export --armor $NEW_KEY_ID > TEMPORARY_VOLUME/$NEW_KEY_ID-signed.gpg
+```
+
+You can now also upload your new Master Key to key server, with included signature from old key. To do this, run the command below:
+
+```sh
+gpg --send-keys $NEW_KEY_ID
+```
+
+Mount back your temporary volume on Secure OS with Offline Secure Volume available and run:
+
+```sh
+gpg --import $TEMPORARY_VOLUME/${KEYID}-signed.gpg
+```
 
 ##### Transfering keys into YubiKeys
 
