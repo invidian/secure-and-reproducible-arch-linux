@@ -1,12 +1,22 @@
 # Secure and reproducible Arch Linux
 
+## Introduction
+
+### Goals
+
 This guide has the following goals:
 - Automate secure installation of Arch Linux.
 - Document security best practices and processes around performing backups, using YubiKeys, operating Secure Boot etc. in a single place.
 - Provide optimal security against unauthorized access to online services you use.
 - Provide optimal security against unauthorized access to data on your devices.
 
+### Audience
+
 This guide is mainly targets developers and system administrators using Linux as daily operating system on their workstations, which either use or would like to use Arch Linux.
+
+### Motivation
+
+The main motivation for this project is to gather and combine various best practices
 
 ## Table of Contents
 - [Secure and reproducible Arch Linux](#secure-and-reproducible-arch-linux)
@@ -1037,53 +1047,170 @@ PIN will be used for:
 
 ##### Setting up HMAC-SHA1 Challenge-Response
 
-###### Generating access code
+###### Swapping slots
 
-From https://security.stackexchange.com/a/183951
+This guide use only one slot out of two available of OTP applet in YubiKey. First slot functionality is triggered by short touch and second slot is triggered by long touch.
+
+By default first slot is configured with [Yubico OTP](https://demo.yubico.com/otp/verify), so one-time challenge will be typed into your computer when you touch the YubiKey button.
+
+Even though OTP challenge is not confidential, accidental typing it might be annoying, so it is recommended to swap the slots, so first one will be used for HMAC-SHA1 Challenge-Response.
+
+We swap slots instead of wiping or overriding first slot to retain a factory secret programmed by Yubico, so if you need to use Yubico OTP service with [production `cc` prefix](https://www.reddit.com/r/yubikey/comments/i5782b/overwriting_slot_1_reset/), it is still possible.
+
+To swap the slots, run the following command:
+
+```sh
+ykman otp swap
+```
+
+This command is non destructive and you can run it as many times as you want. Slots will be swapped each time.
+
+To see currently programmed slots, run:
+
+```sh
+ykman otp info
+```
+
+**NOTE: Make sure you run the swap command mentioned above for each of your YubiKey. **
+
+###### Checking existing Challenge-Response configuration
+
+If you want to find out if your device has already Challenge-Response configured on some slot, run the following command:
+
+```sh
+ykchalresp -1 'Sample #2'
+```
+
+Then, try running the command below:
+
+```sh
+ykchalresp -2 'Sample #2'
+```
+
+If any of the command succeeds and prints a hash, it means on the used slot Challenge-Response is already configured.
+
+###### Generating Access Code
+
+To avoid accidental removal of your OTP configuration, it is recommended to set up an access code, which will be required for each configuration change. We will generate random Access Code and store it on Offline Secure Volumes.
+
+To generate Access Code and write it to the file, run the command below:
+
+```sh
+(LC_ALL=C tr -dc '[:digit:]' < /dev/urandom | head -c12; echo) > yubikey-slot-1-hmac-sha1-challenge-response-access-code
+```
+
+Now, because we have 2 slots on each device, we generate one more Access Code by running the command below:
 
 ```sh
 (LC_ALL=C tr -dc '[:digit:]' < /dev/urandom | head -c12; echo) > yubikey-slot-2-hmac-sha1-challenge-response-access-code
 ```
 
-###### Generating configuration
+###### Configuring access code
 
-TODO:
-
-- Breakdown flags here, from https://developers.yubico.com/yubico-pam/Authentication_Using_Challenge-Response.html
+To configure Access Code on your device, run the commands below:
 
 ```sh
-ykpersonalize -d -2 -ochal-resp -ochal-hmac -ohmac-lt64 -oserial-api-visible -oaccess=$(cat yubikey-slot-2-hmac-sha1-challenge-response-access-code) -c000000000000 -s yubikey-slot-2-hmac-sha1-challenge-response-configuration
+ykman otp settings --new-access-code $(cat yubikey-slot-1-hmac-sha1-challenge-response-access-code) 1
+ykman otp settings --new-access-code $(cat yubikey-slot-2-hmac-sha1-challenge-response-access-code) 2
 ```
 
-###### Writing configuration to devices
+###### Verifying access code
+
+To verify that your access code is functional, you can run the command below:
+
+```sh
+ykman otp swap
+```
+
+It should fail with the output similar to below:
+
+```console
+$ ykman otp swap
+Swap the two slots of the YubiKey? [y/N]: y
+Swapping slots...
+Usage: ykman otp swap [OPTIONS]
+Try 'ykman otp swap -h' for help.
+
+Error: Failed to write to the YubiKey. Make sure the device does not have restricted access.
+```
+
+###### Generating Challenge-Response key
+
+To be able to maintain redundancy between two keys, we must generate Challenge-Response key manually, then program it on each of YubiKeys.
+
+To generate the key and write it to file, run the command below:
+
+```sh
+xxd -ps -l 20 /dev/urandom > yubikey-slot-1-hmac-sha1-challenge-response-secret
+```
+
+This command generates secret key from `/dev/urandom` in hex format with length of 40 characters, which will be suitable as Challenge-Response key.
+
+###### Setting Challenge-Response key on the devices
 
 With configuration generated, plug each of your YubiKey and run the following command to apply generated configuration:
 
 ```sh
-cat yubikey-slot-2-hmac-sha1-challenge-response-configuration | ykpersonalize -d -2 -c000000000000
+ykman otp --access-code $(cat yubikey-slot-1-hmac-sha1-challenge-response-access-code) chalresp 1 -t $(cat yubikey-slot-1-hmac-sha1-challenge-response-secret)
 ```
 
 ##### Setting up PIV applet
 
-From https://developers.yubico.com/yubico-piv-tool/YubiKey_PIV_introduction.html
+Next on the list is generation of the PIV applet, where we will store key pair with certificate, which will be used to sign the kernels for Secure Boot.
 
-###### Generating management key
+###### Generating Management Key
+
+With YubiKey 5, you can either have only PIN configured, or PIN, PUK and Management Key. Since we want to have PUK functionality to make PIV block after unsuccessful PIN attempts, we need to generate the Management Key and PUK.
+
+Run the command below to generate the Management Key:
 
 ```sh
 export LC_CTYPE=C; dd if=/dev/urandom 2>/dev/null | tr -d '[:lower:]' | tr -cd '[:xdigit:]' | fold -w48 | head -1 > yubikey-piv-applet-management-key
 ```
 
+###### Configuring Management Key
+
+To use generated Management Key, run the command below for each YubiKey plugged:
+
+```sh
+ykman piv change-management-key --management-key 010203040506070801020304050607080102030405060708 --new-management-key $(cat yubikey-piv-applet-management-key)
+```
+
+**NOTE: `010203040506070801020304050607080102030405060708` Management Key used above is a default Management Key.**
+
 ###### Generating PUK
+
+Now, we need to generate PUK, which will be used, when you type your PIN incorrectly 3 times. PUK will be stored on Offline Secure Volume, so once you lock your PIV applet, you will need access to it to be able to unlock it.
+
+To generate PUK, run the command below:
 
 ```sh
 export LC_CTYPE=C; dd if=/dev/urandom 2>/dev/null | tr -cd '[:digit:]' | fold -w6 | head -1 > yubikey-piv-applet-puk
 ```
 
-###### Setting PIN
+Commands above are taken from https://developers.yubico.com/yubico-piv-tool/YubiKey_PIV_introduction.html
+
+###### Setting PUK
+
+To set PUK, run the command below with each of your YubiKeys plugged:
 
 ```sh
-yubico-piv-tool -achange-pin -P123456
+ykman piv change-puk --puk 12345678 --new-puk $(cat yubikey-piv-applet-puk)
 ```
+
+###### Setting PIN
+
+Finally, we can set up PIN, which will be used to unlock the PIV applet after plugging it in. PIN, similar to [Master Password](#master-password) should never be written down, it should be only stored in your memory.
+
+Once you come up with PIN you're going to use, run the command below to configure it for each YubiKey:
+
+```sh
+ykman piv change-pin -P 123456
+```
+
+###### Summary
+
+For now, we do not generate any secrets using PIV applet. This will be done at later stage when we generate Secure Boot keys.
 
 ##### Setting up GPG smartcard
 
@@ -1100,6 +1227,12 @@ To configure PIN and Admin PIN, run the following command:
 ```sh
 gpg --card-edit
 ```
+
+##### Configuring and securing other YubiKey applets
+
+YubiKey has also other applets available to use, like OATH-TOTP or FIDO which supports protecting with credentials. If you plan to use those applets and you prefer to have them secured, follow the steps similar to above to generate unique keys/passwords and store them on Offline Secure Volume.
+
+This guide will later on use OATH-TOTP for TPM authenticity validation, but it does not require password protection.
 
 #### Generating GPG keys
 
@@ -1122,6 +1255,86 @@ cp <path to temporary volume>/gpg.conf "$GNUPGHOME/"
 ##### Transfering keys into YubiKeys
 
 #### Generating Secure Boot keys
+
+##### Checking if YubiKey PIV slot is in use
+
+###### Checking if YubiKey PIV slot has certificate
+
+To check if your YubiKey PIV slot has some certificate generated, run the following command:
+
+```sh
+ykman piv export-certificate 9c -
+```
+
+If there is a certificate already installed, certificate will be printed. Sample output:
+
+```console
+$ ykman piv export-certificate 9c -
+-----BEGIN CERTIFICATE-----
+MIICuDCCAaCgAwIBAgIUcLwNBpwgDIWAJSLpCKVny6O1kHwwDQYJKoZIhvcNAQEL
+BQAwFjEUMBIGA1UEAwwLbWF0LXRlc3RpbmcwHhcNMjEwMzA3MTEzMTEwWhcNMjIw
+MzA3MTEzMTEwWjAWMRQwEgYDVQQDDAttYXQtdGVzdGluZzCCASIwDQYJKoZIhvcN
+AQEBBQADggEPADCCAQoCggEBAJ/XJPOSP7gm3pm7NuRGRdtf4tLTUoywJZ3LJxXk
+lQmuGRo91/SJ2wnxFLosfSkHuYK6tURgLuIfknXUezExT2IUC0ZRme/oPsvLQ1ij
+IUbupzmbbbLFDjFUsRbyZ3xxSjxIH2GaTzh8K3YlKmr1F5kI6OdiDnCGhXHBlYr0
+QeT091h3FG3P7A78mwv4+Rn8ifdL37uYXlWVuW78dWkiLMdFHyjRTrQMlj2TIoMd
+Pi0+GfmTokziTgM2sDAkRhbkGQDghlFMjFahj//nQkYWWxVjE1KwvgFEwth4iIrl
+IMOV0WNubSYP9dJm2bTjDO5WublxLe2MxMTnRaZVmSkrXi0CAwEAATANBgkqhkiG
+9w0BAQsFAAOCAQEAjq3BgqrddMAo3f+W1t8/ZqdWmxdsNs5RUs8Mhgp9PgNxa0aP
+zDIcuD7JIBrwmXNrobPZRmmPJbKmHP3230Gyq8DyeAoEHVxICKf7p3OTFA/adAWw
+ZXmxP7tfW/P35cSsZvNjL50gVGc33eirRWibbVkDTn+3FhTLyQe3wmXTbrdZFTJN
+2j58AiARQ2MX2av6hDDmwEPC1yGImRWkzzToOc8R3xt5oqy+RJ0b60UwRLWArfuJ
+LpJ8ZEJ6ltTjZGgyMRHn7VamijkeAgoAHwkRTwKT9DshLwmC2oVIOhPVm7Wbdaox
+6cIwjyZypyBw0Pawr0GlA0Sl4oo1v0kWL458xw==
+-----END CERTIFICATE-----
+```
+
+If there is no certificate, you should get error similar to below:
+
+```console
+$ ykman piv export-certificate 9d -
+Usage: ykman piv export-certificate [OPTIONS] SLOT CERTIFICATE
+Try 'ykman piv export-certificate -h' for help.
+
+Error: No certificate found.
+```
+
+###### Checking if YubiKey PIV slot has key pair
+
+[Checking if slot has a certificate](#checking-if-yubikey-piv-slot-has-certificate) is recommended before checking if slot has a private key, as certificate generation attempt is used to determine if slot already has a key pair generated.
+
+To check if slot has key pair generated, run the command below:
+
+**NOTE: This command may wipe the certificate from your slot. Use with caution! It is recommended to check for certificate existence before running this command. **
+
+```sh
+cat <<EOF | ykman piv generate-certificate -s "testing" 9d -
+-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAn9ck85I/uCbembs25EZF
+21/i0tNSjLAlncsnFeSVCa4ZGj3X9InbCfEUuix9KQe5grq1RGAu4h+SddR7MTFP
+YhQLRlGZ7+g+y8tDWKMhRu6nOZttssUOMVSxFvJnfHFKPEgfYZpPOHwrdiUqavUX
+mQjo52IOcIaFccGVivRB5PT3WHcUbc/sDvybC/j5GfyJ90vfu5heVZW5bvx1aSIs
+x0UfKNFOtAyWPZMigx0+LT4Z+ZOiTOJOAzawMCRGFuQZAOCGUUyMVqGP/+dCRhZb
+FWMTUrC+AUTC2HiIiuUgw5XRY25tJg/10mbZtOMM7la5uXEt7YzExOdFplWZKSte
+LQIDAQAB
+-----END PUBLIC KEY-----
+EOF
+```
+
+If slot already has some key, this command should return no output.
+
+If slot is empty and there is no private key, you should see output similar to the following:
+
+```console
+$ ykman piv generate-certificate 9c testing.pem -s foo-testing
+Enter PIN:
+Enter a management key [blank to use default key]:
+Usage: ykman piv generate-certificate [OPTIONS] SLOT PUBLIC-KEY
+Try 'ykman piv generate-certificate -h' for help.
+
+Error: Certificate generation failed.
+Touch your YubiKey...
+```
 
 ##### Transferring Database Key into YubiKeys
 
@@ -1174,6 +1387,10 @@ This section documents various processes, which are needed in daily use, like [U
 #### Provisioning new YubiKey
 
 #### Unlocking locked Master PIN
+
+##### Decommissioning old YubiKey device
+
+If you no longer want to use your YubiKey or you want to replace it with the new model, here is recommended list of steps, which will securely wipe all your secrets from your existing YubiKey.
 
 
 ### Using Offline Backup Volume
