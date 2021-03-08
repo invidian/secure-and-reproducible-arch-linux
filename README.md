@@ -837,7 +837,16 @@ To learn more about this warning, read [Tails documentation about verifying imag
 Use Terminal opened in previous step or make sure you're in the temporary volume as a working directly and run the following commands to download the packages, which we will install once we go into offline mode.
 
 ```sh
-pacman -S hopenpgp-tools yubikey-personalization yubikey-manager sssd git libp11 sbsigntools
+# Breakdown of dependencies:
+# - hopenpgp-tools - Fecommended by https://github.com/drduh/YubiKey-Guide for linting your GPG key.
+# - yubikey-manager - For configuring YubiKey.
+# - sssd - For splitting your Master Password into multiple shards.
+# - git - For versioning and syncing data on Offline Backup Volumes.
+# - sbsigntools - For testing Secure Boot signing using YubiKey.
+# - libp11 - PKCS#11 engine for sbsign, requires to work with YubiKey.
+# - opensc - Smart card tools required for p11tool to detect the YubiKey as smartcard.
+# - ccid - Smart card driver.
+pacman -S hopenpgp-tools yubikey-manager sssd git sbsigntools libp11 opensc	ccid
 mkdir packages
 cp /var/cache/pacman/pkg/* ./packages/
 ```
@@ -1090,7 +1099,7 @@ If any of the command succeeds and prints a hash, it means on the used slot Chal
 
 ###### Generating Access Code
 
-To avoid accidental removal of your OTP configuration, it is recommended to set up an access code, which will be required for each configuration change. We will generate random Access Code and store it on Offline Secure Volumes.
+To avoid accidental removal of your OTP configuration, it is recommended to set up an access code, which will be required for each configuration change. We will generate random Access Code and store it on Offline Backup Volumes.
 
 To generate Access Code and write it to the file, run the command below:
 
@@ -1193,7 +1202,7 @@ ykman piv change-management-key --management-key 0102030405060708010203040506070
 
 ###### Generating PUK
 
-Now, we need to generate PUK, which will be used, when you type your PIN incorrectly 3 times. PUK will be stored on Offline Secure Volume, so once you lock your PIV applet, you will need access to it to be able to unlock it.
+Now, we need to generate PUK, which will be used, when you type your PIN incorrectly 3 times. PUK will be stored on Offline Backup Volume, so once you lock your PIV applet, you will need access to it to be able to unlock it.
 
 To generate PUK, run the command below:
 
@@ -1265,7 +1274,7 @@ You will be prompted for the existing PIN, which by default is `123456`.
 
 ##### Configuring and securing other YubiKey applets
 
-YubiKey has also other applets available to use, like OATH-TOTP or FIDO which supports protecting with credentials. If you plan to use those applets and you prefer to have them secured, follow the steps similar to above to generate unique keys/passwords and store them on Offline Secure Volume.
+YubiKey has also other applets available to use, like OATH-TOTP or FIDO which supports protecting with credentials. If you plan to use those applets and you prefer to have them secured, follow the steps similar to above to generate unique keys/passwords and store them on Offline Backup Volume.
 
 This guide will later on use OATH-TOTP for TPM authenticity validation, but it does not require password protection.
 
@@ -1298,7 +1307,7 @@ If successful, it should create few new files in `gnupg-workspace` directory.
 
 ###### Generating Master Key
 
-First thing to do is to generate Master Key, which will be stored only on Offline Secure Volume. To do that, run the command below:
+First thing to do is to generate Master Key, which will be stored only on Offline Backup Volume. To do that, run the command below:
 
 ```sh
 gpg --expert --full-generate-key
@@ -1634,7 +1643,7 @@ export NEW_KEY_ID=<KEYID from other machine>
 gpg --sign-with EXISTING_KEY_ID --sign-key $NEW_KEY_ID
 ```
 
-When it's done, you can export your new master key with new signature and copy it back onto temporary volume, so it can be imported on Offline Secure Volume.
+When it's done, you can export your new master key with new signature and copy it back onto temporary volume, so it can be imported on Offline Backup Volume.
 
 ```sh
 gpg --export --armor $NEW_KEY_ID > TEMPORARY_VOLUME/$NEW_KEY_ID-signed.gpg
@@ -1646,7 +1655,7 @@ You can now also upload your new Master Key to key server, with included signatu
 gpg --send-keys $NEW_KEY_ID
 ```
 
-Mount back your temporary volume on Secure OS with Offline Secure Volume available and run:
+Mount back your temporary volume on Secure OS with Offline Backup Volume available and run:
 
 ```sh
 gpg --import $TEMPORARY_VOLUME/${KEYID}-signed.gpg
@@ -1740,7 +1749,7 @@ Touch your YubiKey...
 
 ##### Generating Platform Key (PK) and Key Exchange Key (KEK)
 
-Platform Key and Key Exchange Key for Secure Boot will be stored on Offline Secure Volume, as they are not required for daily operation. They will only be used during [Hardware Bootstrapping](#hardware-bootstrapping) process to roll out Database public key.
+Platform Key and Key Exchange Key for Secure Boot will be stored on Offline Backup Volume, as they are not required for daily operation. They will only be used during [Hardware Bootstrapping](#hardware-bootstrapping) process to roll out Database public key.
 
 As some BIOSes may not support 4096 bit keys, we use 2048 bit keys.
 
@@ -1810,11 +1819,17 @@ To verify, that both your YubiKeys can generate valid Secure Boot signature, we 
 Run the commands below to configure it:
 
 ```sh
-mkdir -p ~/.config/pkcs11/modules
-echo "module: opensc-pkcs11.so" > ~/.config/pkcs11/modules/opensc-pkcs11.module
+mkdir -p /etc/pkcs11/modules
+echo "module: opensc-pkcs11.so" > /etc/pkcs11/modules/opensc-pkcs11.module
 ```
 
-Now, run `p11tool` to find URI for private key on your YubiKey:
+And make sure your `pcscd`daemon is running by executing the command below:
+
+```sh
+systemctl start pcscd.service
+```
+
+Now, run `p11tool` to verify it's able to detect your YubiKey:
 
 ```sh
 p11tool --list-all-privkeys
@@ -1831,24 +1846,20 @@ pkcs11:model=p11-kit-trust;manufacturer=PKCS%2311%20Kit;serial=1;token=Default%2
 pkcs11:model=PKCS%2315%20emulated;manufacturer=piv_II;serial=cf397c0faff98e2d;token=%20kernel-signing%20key
 ```
 
-We are interested in last line, so let's save it to variable:
-
-```sh
-export DATABASE_KEY_URI=pkcs11:model=PKCS%2315%20emulated;manufacturer=piv_II;serial=cf397c0faff98e2d;token=%20kernel-signing%20key
-```
-
 Now, we can generate test Secure Boot signature using the command below:
 
 ```sh
-sbsign --engine pkcs11 --key $DATABASE_KEY_URI --cert db.crt --output test-secure-boot-signature --detached vmlinuz-linux
+sbsign --engine pkcs11 --key 'pkcs11:manufacturer=piv_II' --cert db.crt --output test-secure-boot-signature --detached /run/archiso/bootmnt/arch/boot/x86_64/vmlinuz-linux
 ```
 
 This command will ask you for PIN twice and you need to finalize the process by touching the YubiKey.
 
+> NOTE: If you do not have `db.crt` file around anymore, you can generate it by running `ykman piv export-certificate 9c db.crt`, assuming you have already generated and transferred the certificate into your YubiKey.
+
 Now, to verify generated signature, run:
 
 ```sh
-sbverify --cert db.crt --detached test-secure-boot-signature vmlinuz-linux
+sbverify --cert db.crt --detached test-secure-boot-signature /run/archiso/bootmnt/arch/boot/x86_64/vmlinuz-linux
 ```
 
 If everything went well, you should get the following output:
@@ -1857,11 +1868,100 @@ If everything went well, you should get the following output:
 Signature verification OK
 ```
 
-#### Saving and synchronizing data between Offline Secure Volumes
+#### (Optional) Generating Password Salt
 
-#### Transferring GPG keys into YubiKeys
+If you plan to use [Password Salt](#password-salt), it should be safe to save it on Offline Backup Volume in case you forget it.
 
-#### Creating Arch Linux bootable USB device
+### Saving and synchronizing data between Offline Backup Volumes
+
+At this point, you should have all secrets created or generated, which are covered by the general bootstrap process. There will be more secrets to generate, which will be done for each machine you have, described in [Harware Bootstrapping](#hardware-bootstrapping) section, but this will be done later.
+
+At this point, all secrets are stored on a single Offline Backup Volume and we need to sync them into the other volume. To do that, we will be using Git, which will allow us to handle extra checksums, versioning and synchronization of all secrets.
+
+#### Configuring Git
+
+First, we will generate basic Git configuration, which will use GPG. This can be done automatically using the command below:
+
+```sh
+export NAME=$(gpg --with-colons --list-keys $KEYID | grep ^uid | head -n1 | cut -d: -f 10 | cut -d\< -f1 | sed 's/ $//g')
+export EMAIL=$(gpg --with-colons --list-keys $KEYID | grep ^uid | head -n1 | cut -d: -f 10 | cut -d\< -f2 | sed -E 's/( |>)$//g')
+export SIGNING_KEY=$(gpg --with-colons --list-keys $KEYID | grep :s: | cut -d: -f5)
+cat <<EOF > ~/.gitconfig
+[user]
+        email = ${EMAIL}
+        name = ${NAME}
+        signingkey = ${SIGNING_KEY}!
+[commit]
+        gpgsign = true
+EOF
+```
+
+#### Initializing repository
+
+Now, having mounted Offline Backup Volume as a working directory, we can initialize new Git repository and commit all generated files into it by running the commands below:
+
+```sh
+git init
+git add --all
+git commit -s -m "Initial commit"
+```
+
+You can now also verify, that Git signing is functional by running the command below:
+
+```sh
+git verify-commit HEAD
+```
+
+Do note, that signing commits here does not have much value, as we store Signing private key in this Git repository itself and it's not password protected. However, it proofs, that your Git configuration is functional.
+
+#### Initial sync into other Offline Backup Volumes
+
+Creating a copy of data into another Offline Backup Volume is as simple as running the command below:
+
+```sh
+export OBV_ID=OBV2
+export MOUNTPOINT=/mnt/$OBV_ID
+git clone . $MOUNTPOINT
+```
+
+#### Syncing further changes
+
+If you rotate, modify or add new secrets in the future, to synchronize 2 Offline Backup Volumes, commit your changes in one copy, for example by running:
+
+```sh
+git add --all # To add all new, untracked files.
+git commit -s
+```
+
+Then, change your working directory to the other Offline Backup Volume, for example by running:
+
+```sh
+export OBV_ID=OBV2
+export MOUNTPOINT=/mnt/$OBV_ID
+cd $MOUNTPOINT
+```
+
+And finally, run:
+
+```
+git pull
+```
+
+And if you want to pull from 2nd copy into the first one, make sure you configure the right origin URL by running the command as bellow:
+
+```sh
+git remote set-url origin /mnt/$OBV_ID
+```
+
+And also run:
+
+```sh
+git pull
+```
+
+### Transferring GPG keys into YubiKeys
+
+### Creating Arch Linux bootable USB device
 
 With downloaded and verified Arch Linux ISO, you can now plug your USB device which you would like to use as an [OS Recovery Volume](#os-recovery-volume). For now we will write vanilla Arch Linux ISO on it to be able to create a customized version of it.
 
@@ -1869,7 +1969,7 @@ For simplicity, you can again use `Utilities -> Disks` application on Tails, sel
 
 After successful disk restoration, you can unplug this USB device for now, we will need it at latest stage.
 
-#### Q&A List
+### Q&A List
 
 - How do you boot Secure OS with Secure Boot enabled?
   - You don't. You boot Recovery OS instead.
