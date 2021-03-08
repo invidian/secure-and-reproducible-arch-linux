@@ -837,7 +837,7 @@ To learn more about this warning, read [Tails documentation about verifying imag
 Use Terminal opened in previous step or make sure you're in the temporary volume as a working directly and run the following commands to download the packages, which we will install once we go into offline mode.
 
 ```sh
-pacman -S hopenpgp-tools yubikey-personalization yubikey-manager sssd git
+pacman -S hopenpgp-tools yubikey-personalization yubikey-manager sssd git libp11 sbsigntools
 mkdir packages
 cp /var/cache/pacman/pkg/* ./packages/
 ```
@@ -1433,6 +1433,18 @@ Now, it is recommended to renew your keys yearly, to ensure you still have acces
 1y
 ```
 
+Verify the expiration date and confirm:
+
+```sh
+y
+```
+
+And confirm again:
+
+```sh
+y
+```
+
 Finally, commit the result by using:
 
 ```sh
@@ -1473,6 +1485,18 @@ Again, select `1y` expiration time as explained above:
 
 ```sh
 1y
+```
+
+Verify the expiration date and confirm:
+
+```sh
+y
+```
+
+And confirm again:
+
+```sh
+y
 ```
 
 Finally, commit the result by using:
@@ -1573,6 +1597,18 @@ Similarly to other keys, select `1y` expiration time:
 1y
 ```
 
+Verify the expiration date and confirm:
+
+```sh
+y
+```
+
+And confirm again:
+
+```sh
+y
+```
+
 Finally, commit the result by using:
 
 ```sh
@@ -1616,15 +1652,17 @@ Mount back your temporary volume on Secure OS with Offline Secure Volume availab
 gpg --import $TEMPORARY_VOLUME/${KEYID}-signed.gpg
 ```
 
-##### Transfering keys into YubiKeys
-
 #### Generating Secure Boot keys
+
+This guide use Secure Boot to protect your machines against bootloader-level malware and to prevent unauthorized code execution on your machine. To use Secure Boot, you must generate your own set of keys for Secure Boot, which key used for signing the kernels will be stored on YubiKey. For that, you need PIV applet configured as explained in [Setting up PIV applet](#setting-up-piv-applet) section.
 
 ##### Checking if YubiKey PIV slot is in use
 
+If you used your YubiKey before, it is good to check if there are any existing certificates on the key to avoid overriding it.
+
 ###### Checking if YubiKey PIV slot has certificate
 
-To check if your YubiKey PIV slot has some certificate generated, run the following command:
+To check if your YubiKey PIV slot has some certificate generated on a given slot, run the command below. In this case, we check slot `9c`:
 
 ```sh
 ykman piv export-certificate 9c -
@@ -1700,7 +1738,128 @@ Error: Certificate generation failed.
 Touch your YubiKey...
 ```
 
+##### Generating Platform Key (PK) and Key Exchange Key (KEK)
+
+Platform Key and Key Exchange Key for Secure Boot will be stored on Offline Secure Volume, as they are not required for daily operation. They will only be used during [Hardware Bootstrapping](#hardware-bootstrapping) process to roll out Database public key.
+
+As some BIOSes may not support 4096 bit keys, we use 2048 bit keys.
+
+As Secure Boot verification process to not take certificate expiry time into account, make it expire after one day.
+
+Open Terminal and change working directory to one of Offline Backup Volumes.
+
+First, adjust `IDENTIFIER` variable to your preference.
+
+```sh
+export IDENTIFIER="JohnDoe's"
+```
+
+Now, run the commands below to generate all necessary keys:
+
+```sh
+
+mkdir -p secureboot && cd secureboot
+openssl req -new -x509 -newkey rsa:2048 -subj "/CN=$IDENTIFIER Secure Boot Platform Key/" -keyout PK.key -out PK.crt -days 1 -nodes -sha256
+openssl req -new -x509 -newkey rsa:2048 -subj "/CN=$IDENTIFIER Secure Boot Key Exchange Key/" -keyout KEK.key -out KEK.crt -days 1 -nodes -sha256
+openssl req -new -x509 -newkey rsa:2048 -subj "/CN=$IDENTIFIER kernel-signing key/" -keyout db.key -out db.crt -days 1 -nodes -sha256
+cert-to-efi-sig-list -g "$(uuidgen)" PK.crt PK.esl
+sign-efi-sig-list -k PK.key -c PK.crt PK PK.esl PK.auth
+cert-to-efi-sig-list -g "$(uuidgen)" KEK.crt KEK.esl
+sign-efi-sig-list -a -k PK.key -c PK.crt KEK KEK.esl KEK.auth
+cert-to-efi-sig-list -g "$(uuidgen)" db.crt db.esl
+sign-efi-sig-list -a -k KEK.key -c KEK.crt db db.esl db.auth
+openssl x509 -outform DER -in PK.crt -out PK.cer
+openssl x509 -outform DER -in KEK.crt -out KEK.cer
+openssl x509 -outform DER -in db.crt -out db.cer
+cp -v KEK.esl compound_KEK.esl
+cp -v db.esl compound_db.esl
+sign-efi-sig-list -k PK.key -c PK.crt KEK compound_KEK.esl compound_KEK.auth
+sign-efi-sig-list -k KEK.key -c KEK.crt db compound_db.esl compound_db.auth
+```
+
+Those commands are taken from [Gentoo wiki](https://wiki.gentoo.org/wiki/User:Sakaki/Sakaki%27s_EFI_Install_Guide/Configuring_Secure_Boot_under_OpenRC#Saving_Current_Keystore_Values.2C_and_Creating_New_Keys).
+
 ##### Transferring Database Key into YubiKeys
+
+With Secure Boot keys generate, now we can transfer Database key into the YubiKey.
+
+First, we will import private key using the command below:
+
+```sh
+ykman piv import-key --management-key $(cat ../yubikey-piv-applet-management-key) --pin-policy ALWAYS --touch-policy ALWAYS 9c db.key
+```
+
+Once finished, we can import the certificate:
+
+```sh
+ykman piv import-certificate --management-key $(cat ../yubikey-piv-applet-management-key) --verify 9c db.crt
+```
+
+You can verify the import process by running:
+
+```sh
+ykman piv info
+```
+
+This process must be repeated for each of your YubiKeys.
+
+##### Verifying signing capabilities
+
+To verify, that both your YubiKeys can generate valid Secure Boot signature, we must configure PKCS#11 engine.
+
+Run the commands below to configure it:
+
+```sh
+mkdir -p ~/.config/pkcs11/modules
+echo "module: opensc-pkcs11.so" > ~/.config/pkcs11/modules/opensc-pkcs11.module
+```
+
+Now, run `p11tool` to find URI for private key on your YubiKey:
+
+```sh
+p11tool --list-all-privkeys
+```
+
+You should get output similar to the following:
+
+```console
+$ p11tool --list-all-privkeys
+warning: no token URL was provided for this operation; the available tokens are:
+
+pkcs11:model=p11-kit-trust;manufacturer=PKCS%2311%20Kit;serial=1;token=System%20Trust
+pkcs11:model=p11-kit-trust;manufacturer=PKCS%2311%20Kit;serial=1;token=Default%20Trust
+pkcs11:model=PKCS%2315%20emulated;manufacturer=piv_II;serial=cf397c0faff98e2d;token=%20kernel-signing%20key
+```
+
+We are interested in last line, so let's save it to variable:
+
+```sh
+export DATABASE_KEY_URI=pkcs11:model=PKCS%2315%20emulated;manufacturer=piv_II;serial=cf397c0faff98e2d;token=%20kernel-signing%20key
+```
+
+Now, we can generate test Secure Boot signature using the command below:
+
+```sh
+sbsign --engine pkcs11 --key $DATABASE_KEY_URI --cert db.crt --output test-secure-boot-signature --detached vmlinuz-linux
+```
+
+This command will ask you for PIN twice and you need to finalize the process by touching the YubiKey.
+
+Now, to verify generated signature, run:
+
+```sh
+sbverify --cert db.crt --detached test-secure-boot-signature vmlinuz-linux
+```
+
+If everything went well, you should get the following output:
+
+```console
+Signature verification OK
+```
+
+#### Saving and synchronizing data between Offline Secure Volumes
+
+#### Transferring GPG keys into YubiKeys
 
 #### Creating Arch Linux bootable USB device
 
@@ -1724,6 +1883,8 @@ After successful disk restoration, you can unplug this USB device for now, we wi
       - MAC address filtering does not offer good security either, as MAC addresses can be spoofed. It may also be difficult to roll out on some devices.
       - Security measures should be used on higher levels than MAC addresses (Layer 2) anyway to provide additional security for your network.
     - Storing other types of secrets in Recovery Image is not supported right now with this guide. If this is what you really need, perhaps you need to replace the `archiso` in Recovery Image build process to perform regular Arch Linux installation, including disk encryption, similar to what we will be finally using, then configuring `overlayfs` combined with `tmpfs` or similar configuration and mount your root partition in read-only mode, to get ISO like environment which cannot be permanently modified while used.
+
+## Hardware Bootstrapping
 
 ## Day-2 Operations
 
