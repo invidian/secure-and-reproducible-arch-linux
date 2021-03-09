@@ -742,9 +742,9 @@ Before rebooting, make sure you remember an address of this guide, so you can co
 
 Once rebooted, make sure you configure your network before proceeding.
 
-##### Configuring Arch Linux ISO
+#### Configuring Arch Linux ISO
 
-###### Connecting to the Wi-Fi
+##### Connecting to the Wi-Fi
 
 If you know the name of your device and your network SSID, you can use the command below to authenticate to the network. Once done, connection should be established automatically and DHCP client should configure the rest automatically.
 
@@ -764,7 +764,7 @@ To scan and list available networks, run:
 iwctl station <device> scan && iwctl station <device> get-networks
 ```
 
-###### Expanding available disk space
+##### Expanding available disk space
 
 To make some space if you need to install more packages, run the following command:
 
@@ -776,7 +776,7 @@ NOTE: All packages will be installed into RAM, so make sure you have enough of i
 
 NOTE: 4GB should be sufficient to install all updates, Gnome Shell and Firefox.
 
-###### Installing and running graphical interface
+##### (Optional) Installing and running graphical interface
 
 If you want to have a graphical interface during bootstrapping, run the following commands:
 
@@ -791,9 +791,72 @@ NOTE: This is only required to be done manually during bootstrapping process. La
 
 With Arch Linux USB stick running, we can fetch this repository, verify it's signature and run a script, which will pull all required dependencies into a temporary volume, so you can continue following bootstrapping process without the internet access, to make sure generated secrets are not exposed to the internet.
 
-##### Format and mount temporary volume
+##### (Optional) Format temporary volume
 
-Once running Arch, plug your temporary volume, format it if needed and mount it somewhere. Then make it your working directory.
+Once running Arch, plug your USB devices which will serve as a temporary volume, then use the command below to identify plugged devices:
+
+```sh
+ls -d /dev/disk/by-id/* | grep -v -E -- '(-part[0-9]+|by-id/(dm|lvm|wwn|nvme-eui)-)'
+```
+
+If you are unsure, which of your device is which, in care of removable devices, you can run the following command:
+
+```sh
+journalctl -fk | grep 'SerialNumber:'
+```
+
+Then unplug and plug your device. It should print you the serial number, which you can find in the list created by the command above.
+
+Once you identified your device, run the following command to make be able to automate remaining commands:
+
+```sh
+export TMP_DEVICE=<your full path to device>
+export TMP_ID=tmp
+```
+
+Now, run the command below to examine the script which will create a new GPT partition table on your selected device and create one big partition on it:
+
+```sh
+cat ./scripts/partition-offline-backup-volume.sh
+```
+
+Once you confirm, that the script is safe to run, run it:
+
+```sh
+OBV_DEVICE=$TMP_DEVICE OBV_ID=$TMP_ID./scripts/partition-offline-backup-volume.sh
+```
+
+Now, create a `ext4` filesystem on the newly created partition using the following command:
+
+```sh
+export DEVICE=/dev/disk/by-partlabel/$TMP_ID
+test -b $DEVICE && mkfs.ext4 -L $TMP_ID $DEVICE
+```
+
+##### Mount temporary volume
+
+If your temporary volume was already formatted, so you did not identify it yet, do it as described above, then export information about it using commands below:
+
+```sh
+export TMP_DEVICE=<your full to device>
+export TMP_ID=tmp
+```
+
+And run commands below to mount it:
+
+```sh
+export PARTITION=/dev/disk/by-partlabel/$TMP_ID
+export MOUNTPOINT=/mnt/$TMP_ID
+mkdir -p $MOUNTPOINT && mount $PARTITION $MOUNTPOINT
+```
+
+Finally, make temporary volume your working directory:
+
+```sh
+cd /mnt/$TMP_ID
+```
+
+The `/mnt/tmp` mountpoint will be used in the next steps.
 
 ##### Fetching repository
 
@@ -846,7 +909,7 @@ Use Terminal opened in previous step or make sure you're in the temporary volume
 # - libp11 - PKCS#11 engine for sbsign, requires to work with YubiKey.
 # - opensc - Smart card tools required for p11tool to detect the YubiKey as smartcard.
 # - ccid - Smart card driver.
-pacman -S hopenpgp-tools yubikey-manager sssd git sbsigntools libp11 opensc	ccid
+pacman -S hopenpgp-tools yubikey-manager sssd git sbsigntools libp11 opensc ccid
 mkdir packages
 cp /var/cache/pacman/pkg/* ./packages/
 ```
@@ -865,11 +928,11 @@ Before you boot, ensure your Ethernet cable is unplugged to make sure you don't 
 
 ##### Mounting temporary volume
 
-After the reboot, mount the temporary volume, unpack this repository and continue following the instruction.
+After the reboot, repeat the steps from [Mount temporary volume](#mount-temporary-volume) to make your Temporary Volume available and your working directory.
 
 ##### Installing dependencies offline
 
-Open terminal with temporary volume as your working directory, then run the command below to install all required packages:
+With temporary volume as your working directory, run the command below to install all required packages:
 
 ```sh
 pacman -U ./packages/*
@@ -949,7 +1012,7 @@ Once you identified your device, run the following command to make be able to au
 
 ```sh
 export OBV_DEVICE=<your full to device>
-export OBV_ID=OBV1 # Paritition label is limited to N characters.
+export OBV_ID=OBV1 # Paritition label is limited to 16 characters.
 ```
 
 Now, run the command below to examine the script which will create a new GPT partition table on your selected device and create one big partition on it:
@@ -1176,6 +1239,12 @@ Additionally, if you like, you can reproduce the YubiKey functionality using the
 echo -n 'Sample #2'  | openssl dgst -sha1 -mac HMAC -macopt hexkey:$(cat yubikey-slot-1-hmac-sha1-challenge-response-secret) | awk '{print $2}'
 ```
 
+###### hmac-lt64 configuration flag
+
+By default, YubiKey Challenge-Response take challenges between 0 and 63 bytes and calculates response for them. With `ykpersonalize`, you can disable `hmac-lt64` configuration flag, which makes YubiKey always require 64 bytes challenge. Note, that this mode may not be compatible with some applications.
+
+See [this GitHub issue](https://github.com/Yubico/yubikey-personalization/issues/174) for more details.
+
 ##### Setting up PIV applet
 
 Next on the list is generation of the PIV applet, where we will store key pair with certificate, which will be used to sign the kernels for Secure Boot.
@@ -1272,6 +1341,12 @@ And select option `1.` to change your PIN.
 
 You will be prompted for the existing PIN, which by default is `123456`.
 
+###### Setting Reset Code
+
+This guide do not make use of Reset Code. Reset Code in GPG applet is used only for resetting PIN capability. If you would like to generate and use Reset Code, generate it in similar way as Admin PIN was generated.
+
+See [this link](https://forum.yubico.com/viewtopicd01c.html?p=9055#p9055) for more details.
+
 ##### Configuring and securing other YubiKey applets
 
 YubiKey has also other applets available to use, like OATH-TOTP or FIDO which supports protecting with credentials. If you plan to use those applets and you prefer to have them secured, follow the steps similar to above to generate unique keys/passwords and store them on Offline Backup Volume.
@@ -1291,7 +1366,7 @@ chmod 0700 "$GNUPGHOME"
 
 Now, copy previously downloaded `gpg.conf` file into new GPG home directory by running command like:
 ```sh
-export TEMPORARY_VOLUME=<path to temporary volume>
+export TEMPORARY_VOLUME=/mnt/tmp
 cp $TEMPORARY_VOLUME/gpg.conf $GNUPGHOME/
 ```
 
@@ -1872,6 +1947,14 @@ Signature verification OK
 
 If you plan to use [Password Salt](#password-salt), it should be safe to save it on Offline Backup Volume in case you forget it.
 
+#### Generating secrets for your first hardware
+
+Part of [Hardware Bootstrapping](#hardware-bootstrapping) process is generation of [Disk Encryption Recovery Key](#disk-encryption-recovery-key) and BIOS password, which will be stored on Offline Secure Volume.
+
+To save some time on rebooting and mounting volumes, we will generate them right now.
+
+Encrypted version of Disk Encryption Recovery Key will also be stored in encrypted version in first [Recovery Volume](#recovery-volume), so we can perform regular automated Arch Linux installation.
+
 ### Saving and synchronizing data between Offline Backup Volumes
 
 At this point, you should have all secrets created or generated, which are covered by the general bootstrap process. There will be more secrets to generate, which will be done for each machine you have, described in [Harware Bootstrapping](#hardware-bootstrapping) section, but this will be done later.
@@ -1961,30 +2044,214 @@ git pull
 
 ### Transferring GPG keys into YubiKeys
 
-### Creating Arch Linux bootable USB device
+With all generates secrets synchronized and versioned, you can now transfer generated GPG keys into all your YubiKeys. As `keytocard` GPG command removes the keys from your local GPG keyring, we will use `git restore` functionality to restore them to be able to transfer them into backup YubiKey.
 
-With downloaded and verified Arch Linux ISO, you can now plug your USB device which you would like to use as an [OS Recovery Volume](#os-recovery-volume). For now we will write vanilla Arch Linux ISO on it to be able to create a customized version of it.
+To transfer keys into YubiKey, start by running the command below:
 
-For simplicity, you can again use `Utilities -> Disks` application on Tails, select the right device, then open menu and select "Restore Disk Image" option there.
+```sh
+gpg --edit-key $KEYID
+```
 
-After successful disk restoration, you can unplug this USB device for now, we will need it at latest stage.
+Now, select the Signature key:
 
-### Q&A List
+```sh
+key 1
+```
 
-- How do you boot Secure OS with Secure Boot enabled?
-  - You don't. You boot Recovery OS instead.
-    - Guarantees **Authenticity (identity)**.
-- How do you protect booting Recovery OS? Does it need to be protected?
-  - You can use `dm-verity` to generate hash of root filesystem, then add it to the kernel command line parameters with EFISTUB and sign it using Secure Boot Database Key.
-    - Guarantees **integrity**.
-  - What about possible credentials stored on the image? Private keys for Wireguard installation network? WiFi password? If you encrypt, how do you decrypt?
-    - There should be no secrets stored on the image except the WiFi password, which is required to enable installation over local wireless network. An attacker with physical access to your Recovery Image, may have physical access to your Ethernet network anyway, if you do not have 802.1X configured on Ethernet level or additional physical protection on the Ethernet ports.
-      - Limiting/disabling DHCP does not offer any real security.
-      - MAC address filtering does not offer good security either, as MAC addresses can be spoofed. It may also be difficult to roll out on some devices.
-      - Security measures should be used on higher levels than MAC addresses (Layer 2) anyway to provide additional security for your network.
-    - Storing other types of secrets in Recovery Image is not supported right now with this guide. If this is what you really need, perhaps you need to replace the `archiso` in Recovery Image build process to perform regular Arch Linux installation, including disk encryption, similar to what we will be finally using, then configuring `overlayfs` combined with `tmpfs` or similar configuration and mount your root partition in read-only mode, to get ISO like environment which cannot be permanently modified while used.
+It should change `ssb` in the line with key with `usage: S` to `ssb*`, marking the key as selected.
+
+Now, initiate the transfer of the key by running:
+
+```sh
+keytocard
+```
+
+Select `(1) Signature key` slot for storing the key:
+
+```sh
+1
+```
+
+Next, deselect Signature key and select Encryption key:
+
+```sh
+key 1
+key 2
+```
+
+And initiate transfer to the card:
+
+```sh
+keytocard
+```
+
+This time, select only available `(2) Encryption key` slot:
+
+```sh
+2
+```
+
+Next, deselect Encryption key and select authentication key:
+
+```sh
+key 2
+key 3
+```
+
+Initiate transfer to card:
+
+```sh
+keytocard
+```
+
+Select `(3) Authentication key` slot:
+
+```sh
+3
+```
+
+Finally, confirm everything:
+
+```sh
+save
+```
+
+Now, run the command below to restore your GPG keyring to original state:
+
+```sh
+git restore gnupg-workspace/
+```
+
+Unplug your current YubiKey and plug the backup one, then repeat the procedure described above, including `git restore` command.
+
+### Copying public keys and certificates into Temporary Volume
+
+As a last step in Offline Mode, before unplugging Offline Backup Volumes, we need to copy some of the generated secrets from it into a temporary volume, so we can embed them into a Recovery Volume we are going to build.
+
+First, export your GPG public key, so we can upload it to key server:
+
+```sh
+gpg --export --armor $KEYID > /mnt/tmp/gpg-public-key.gpg
+```
+
+Next, copy Secure Boot certificates in various formats, to make sure we have format available, which is compatible with your BIOS, which will be needed for [Hardware Bootstrapping](#hardware-bootstrapping):
+
+```sh
+mkdir /mnt/tmp/secureboot
+cp secureboot/compound_db.* secureboot/compound_KEK.* secureboot/db.{auth,cer,crt,esl} secureboot/KEK.{auth,cer,crt,esl} secureboot/PK.{auth,cer,crt,esl} /mnt/tmp/secureboot/
+```
+
+Now, you can unmount both Temporary Volume and Offline Backup Volumes by running the commands below:
+
+```sh
+sync && umount /mnt/*
+```
+
+Once finished, make sure you unplug your Offline Backup Volumes. Remember to never plug them into the machine connected to the network.
+
+### Creating first Arch Linux bootable USB device
+
+In this step, we will prepare your first Recovery Volume, which is Arch Linux bootable USB device. This process has more details described in [Recovery Volume maintenance](#recovery-volume-maintenance) section. Here, we are going to focus to create a basic Arch Linux ISO, which will allow you to perform automated Arch Linux installation over network.
+
+Reboot your machine now and boot it again with Arch Linux ISO. Follow [Configuring Arch Linux ISO](#configuring-arch-linux-iso) and [Mount Temporary Volume](#mount-temporary-volume) again to prepare your environment.
+
+#### Customizing your Arch Linux ISO profile
+
+##### Network setup
+
+##### SSH Access
+
+##### GUI
+
+#### Saving your Arch Linux ISO profile
+
+#### Writing your Arch Linux ISO into Recovery Volume
+
+### Summary
+
+
 
 ## Hardware Bootstrapping
+
+### Generating hardware secrets
+
+#### Booting Recovery Volume in Offline mode
+
+To generate the secrets, boot Recovery Volume...
+
+#### Generate Disk Encryption Recovery Key
+
+If your Secure Boot with TPM setup breaks for some reason, you will be able to use unique Disk Encryption Recovery Key for each of your device, which will be stored on Offline Backup Volume or encrypted in Recovery Volume, to access your data and possibly fix your installation.
+
+It is recommended, that your Disk Encryption Recovery Key is at least 55 characters long, consisting of lower and upper case letters and numbers, which should give you at least 256 bits of entropy using [zxcvbn](https://dropbox.tech/security/zxcvbn-realistic-password-strength-estimation) algorithm. This should be sufficient to provide good protection (more described in [AES-256 Security](#aes-256-security) section) and be short enough it can be typed by hand.
+
+To generate Disk Encryption Recovery Key, first decide on hostname of your first machine. Then export this information using the command below:
+
+```sh
+export FIRST_HOSTNAME=dellxps15johndoe
+```
+
+Now, generate the recovery key:
+
+```sh
+export LC_CTYPE=C; dd if=/dev/urandom 2>/dev/null | tr -cd '[:alnum:]' | fold -w55 | head -1 > ${FIRST_HOSTNAME}-disk-encryption-recovery-key
+```
+
+#### Generate BIOS password
+
+This guide assumes each of your device has unique BIOS password configured. Due to difficulty of cracking the BIOS password and simplicity of simply resetting it, BIOS password can be short as it only provides the basic protection to your machine configuration.
+
+However, it is still good to password to be unique per hardware and stored in your [Daily Password Manager](#daily-password-manager), so you don't have to remember it and you can access it easily.
+
+Different BIOS-es have different password policies, so you may need to check if your BIOS is not limited to shorter maximum length than the default one used below. Usually 8 characters is acceptable, sometimes it's a limit, and sometimes it's a minimum length for "strong" password.
+
+Command below will generate a BIOS password for your hardware and print it to the screen, so you can either write it down on a piece of paper for now (which later on should be destroyed) or you can save it in your Daily Password Manager if you have one. This way, password will be easy to access during [Hardware bootstrapping](#hardware-bootstrapping) process.
+
+```sh
+export BIOS_PASSWORD_LENGTH=8
+export LC_CTYPE=C; dd if=/dev/urandom 2>/dev/null | tr -cd '[:alnum:]' | fold -w${BIOS_PASSWORD_LENGTH} | head -1 | tee ${FIRST_HOSTNAME}-bios-password
+```
+
+BIOS password security is described with more details in [BIOS Password](#bios-password) section.
+
+#### Copying generated Disk Encryption Recovery Key into Temporary Volume
+
+If you want to make your Offline Backup Volume available again, run the following commands to identify the right device:
+
+```sh
+ls -d /dev/disk/by-id/* | grep -v -E -- '(-part[0-9]+|by-id/(dm|lvm|wwn|nvme-eui)-)'
+journalctl -fk | grep 'SerialNumber:'
+```
+
+Now plug the device and export information about it:
+
+```sh
+export TMP_DEVICE=<your full to device>
+export TMP_ID=tmp
+```
+
+And run commands below to mount it:
+
+```sh
+export PARTITION=/dev/disk/by-partlabel/$TMP_ID
+export MOUNTPOINT=/mnt/$TMP_ID
+mkdir -p $MOUNTPOINT && mount $PARTITION $MOUNTPOINT
+```
+
+Then, create encrypted copy of generated Disk Encryption Recovery Key:
+
+```sh
+export RECIPIENT=$(gpg --with-colons --list-keys $KEYID | grep ^uid | head -n1 | cut -d: -f10)
+gpg --encrypt --armor --recipient "$RECIPIENT" ${FIRST_HOSTNAME}-disk-encryption-recovery-key > /mnt/tmp/${FIRST_HOSTNAME}-disk-encryption-recovery-key.gpg
+```
+
+### Build Recovery Volume with new hardware profile
+
+### Setup BIOS password
+
+### Summary
+
+With new Recovery Volume prepared, which supports your new hardware, jump to [OS Installation](#os-installation) section to install OS on your new hardware.
 
 ## Day-2 Operations
 
@@ -2110,6 +2377,18 @@ Here is the breakdown of supported features:
   - Do USB pass-through of your real YubiKey device to the virtual machine. This guide use all 3 GPG slots on YubiKey, so make sure you have a backup of your existing keys.
   - Create a virtual disk which will be acting as your portable GPG keyring. Minimal extra steps will be required to get it to work, e.g. making sure virtual disk is mounted at time when GPG is required + additional environment variable to point to the right `$GNUPGHOME`.
 
+### How do you protect booting Recovery OS? Does it need to be protected?
+
+- Recovery OS uses Secure Boot, which guarantees it's **Authenticity (identity)**.
+- Recovery OS uses `dm-verity` to generate hash of root filesystem, then is then added to the kernel command line parameters with EFISTUB and signed using Secure Boot Database Key. This guarantees it's **integrity**.
+- What about possible credentials stored on the image? Private keys for WireGuard installation network? WiFi password? If you encrypt it, how do you decrypt?
+  - There should be no plaintext secrets stored on the image except the WiFi password, which is required to enable installation over local wireless network. An attacker with physical access to your Recovery Image, may have physical access to your Ethernet network anyway, if you do not have 802.1X configured on Ethernet level or additional physical protection on the Ethernet ports.
+    - Limiting/disabling DHCP does not offer any real security.
+    - MAC address filtering does not offer good security either, as MAC addresses can be spoofed. It may also be difficult to roll out on some devices.
+    - Security measures should be used on higher levels than MAC addresses (Layer 2) anyway to provide additional security for your network.
+  - This guide stores GPG-encrypted Disk Encryption Recovery Keys on Recovery Volume to make them available during installation. For secrets which are not required for unattended boot (e.g. WiFi password), you can use this method to securely store them on Recovery Volume.
+  - Storing other types of plaintext secrets in Recovery Image is not supported right now with this guide. If this is what you really need, perhaps you need to replace the `archiso` in Recovery Image build process to perform regular Arch Linux installation, including disk encryption, similar to what we will be finally using, then configuring `overlayfs` combined with `tmpfs` or similar configuration and mount your root partition in read-only mode, to get ISO like environment which cannot be permanently modified while used.
+
 ### Block-based backups vs File-based backups
 
 This guide prefers file-based backups
@@ -2168,6 +2447,7 @@ Similar to situation with GPG AdminPIN and PIV PUK, storing Disk encryption reco
 
 In the real-world scenario, you will need recovery keys in the following situation:
 
+- Corrupted Kernel update - If something goes wrong with kernel update process, then you need a Recovery Volume and recovery key to be able to fix your existing installation.
 - Accidental BIOS update - If you update your BIOS without suspending the TPM requirement for disk encryption, then after the update your system will refuse to decrypt due to differences in PCR values in TPM.
 - Accessing data on another device - If your device gets damaged and you wish to access your data using e.g. USB adapter, then the only way to decrypt the disk is using recovery key.
 - Accessing data from insecure OS - If you wish to access your data from e.g. bootable USB device which is not Secure Boot signed for your machine, then you must use the recovery key.
