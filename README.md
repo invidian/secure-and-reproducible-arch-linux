@@ -843,7 +843,7 @@ NOTE: 4GB should be sufficient to install all updates, Gnome Shell and Firefox.
 If you want to have a graphical interface during bootstrapping, run the following commands:
 
 ```sh
-pacman -Syyu gnome-shell gnome-terminal firefox gnome-control-center
+pacman -Syyu --ignore linux gnome-shell gnome-terminal firefox gnome-control-center
 XDG_SESSION_TYPE=wayland dbus-run-session gnome-session
 ```
 
@@ -926,7 +926,7 @@ Then unplug and plug your device. It should print you the serial number, which y
 Once you identified your device, run the following command to make be able to automate remaining commands:
 
 ```sh
-export TMP_DEVICE=<your full path to device>
+export TMP_DEVICE=/dev/disk/by-id/<your device>
 export TMP_ID=tmp
 ```
 
@@ -954,14 +954,14 @@ test -b $DEVICE && mkfs.ext4 -L $TMP_ID $DEVICE
 If your temporary volume was already formatted, so you did not identify it yet, do it as described above, then export information about it using commands below:
 
 ```sh
-export TMP_DEVICE=<your full to device>
+export TMP_DEVICE=/dev/disk/by-id/<your device>
 export TMP_ID=tmp
 ```
 
 And run commands below to mount it:
 
 ```sh
-export PARTITION=/dev/disk/by-partlabel/$TMP_ID
+export PARTITION=${TMP_DEVICE}-part1
 export MOUNTPOINT=/mnt/$TMP_ID
 mkdir -p $MOUNTPOINT && mount $PARTITION $MOUNTPOINT
 ```
@@ -1098,7 +1098,7 @@ Then unplug and plug your device. It should print you the serial number, which y
 Once you identified your device, run the following command to make be able to automate remaining commands:
 
 ```sh
-export OBV_DEVICE=<your full to device>
+export OBV_DEVICE=/dev/disk/by-id/<your device>
 export OBV_ID=OBV1 # Paritition label is limited to 16 characters.
 ```
 
@@ -1167,7 +1167,7 @@ journalctl -fk | grep 'SerialNumber:'
 Now plug the device and export information about it:
 
 ```sh
-export OBV_DEVICE=<your full to device>
+export OBV_DEVICE=/dev/disk/by-id/<your device>
 export OBV_ID=OBV1
 ```
 
@@ -2308,7 +2308,7 @@ journalctl -fk | grep 'SerialNumber:'
 Now plug the device and export information about it:
 
 ```sh
-export OBV_DEVICE=<your full to device>
+export OBV_DEVICE=/dev/disk/by-id/<your device>
 export OBV_ID=OBV1
 ```
 
@@ -2386,7 +2386,7 @@ journalctl -fk | grep 'SerialNumber:'
 Now plug the device and export information about it:
 
 ```sh
-export TMP_DEVICE=<your full to device>
+export TMP_DEVICE=/dev/disk/by-id/<your device>
 export TMP_ID=tmp
 ```
 
