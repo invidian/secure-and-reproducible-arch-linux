@@ -843,7 +843,7 @@ NOTE: 4GB should be sufficient to install all updates, Gnome Shell and Firefox.
 If you want to have a graphical interface during bootstrapping, run the following commands:
 
 ```sh
-pacman -Syyu gnome-shell gnome-terminal
+pacman -Syyu gnome-shell gnome-terminal firefox gnome-control-center
 XDG_SESSION_TYPE=wayland dbus-run-session gnome-session
 ```
 
@@ -852,6 +852,59 @@ NOTE: This is only required to be done manually during bootstrapping process. La
 #### Fetching required resources into temporary volume
 
 With Arch Linux USB stick running, we can fetch this repository, verify it's signature and run a script, which will pull all required dependencies into a temporary volume, so you can continue following bootstrapping process without the internet access, to make sure generated secrets are not exposed to the internet.
+
+##### Fetching repository
+
+Run the following command to import GPG signing public key, which is used to sign releases in this repository.
+This will allow to verify the signature of downloaded code.
+
+```sh
+curl https://github.com/invidian.gpg -o invidian.gpg
+gpg --import invidian.gpg
+```
+
+Then, run the commands below to fetch and verify this repository:
+
+```sh
+VERSION=testing
+curl -L https://github.com/invidian/secure-and-reproducible-arch-linux/releases/download/${VERSION}/${VERSION}.tar.gz.asc -o ${VERSION}.tar.gz.asc
+curl -L https://github.com/invidian/secure-and-reproducible-arch-linux/archive/${VERSION}.tar.gz -o ${VERSION}.tar.gz
+gpg --verify ${VERSION}.tar.gz.asc ${VERSION}.tar.gz
+```
+
+If everything worked, you should see the output similar to the following:
+```console
+gpg: Signature made Fri Jan 22 23:22:10 2021 UTC
+gpg:                using RSA key C79F76DAB29245AE262EC790CEBABB44587E3AE2
+gpg: Good signature from "Mateusz Gozdek <mgozdekof@gmail.com>" [unknown]
+```
+
+The output will also include the following:
+```console
+gpg: WARNING: This key is not certified with a trusted signature!
+gpg:          There is no indication that the signature belongs to the owner.
+Primary key fingerprint: 297C 1601 AF63 2225 7066  7925 9718 7FA1 271E C224
+     Subkey fingerprint: C79F 76DA B292 45AE 262E  C790 CEBA BB44 587E 3AE2
+```
+
+Despite this warning, the repository you downloaded is still correct according to the signing key that you downloaded.
+
+To learn more about this warning, read [Tails documentation about verifying images](https://tails.boum.org/install/download/index.en.html#command-line).
+
+Let's also save information where the repository has been downloaded, so we can later on copy it into Temporary Volume:
+
+```sh
+export REPOSITORY_PATH=$(pwd)
+```
+
+Finally, unpack the repository and make it your working directory, so we can use scripts from it in the next steps:
+
+```sh
+tar zxvf ${VERSION}.tar.gz
+cd secure-and-reproducible-arch-linux-testing/
+```
+
+Let's also
 
 ##### (Optional) Format temporary volume
 
@@ -920,42 +973,13 @@ cd /mnt/$TMP_ID
 
 The `/mnt/tmp` mountpoint will be used in the next steps.
 
-##### Fetching repository
+##### Move repository into Temporary Volume
 
-Run the following command to import GPG signing public key, which is used to sign releases in this repository.
-This will allow to verify the signature of downloaded code.
-
-```sh
-curl https://github.com/invidian.gpg | gpg --import
-```
-
-Then, run the commands below to fetch and verify this repository:
+With Temporary Volume mounted, copy downloaded repository and associated GPG key into Temporary Volume by running the commands below:
 
 ```sh
-VERSION=testing
-curl -L https://github.com/invidian/secure-and-reproducible-arch-linux/releases/download/${VERSION}/${VERSION}.tar.gz.asc -o ${VERSION}.tar.gz.asc
-curl -L https://github.com/invidian/secure-and-reproducible-arch-linux/archive/${VERSION}.tar.gz -o ${VERSION}.tar.gz
-gpg --verify ${VERSION}.tar.gz.asc ${VERSION}.tar.gz
+cp -r $REPOSITORY_PATH/secure-and-reproducible-arch-linux-testing/ ./
 ```
-
-If everything worked, you should see the output similar to the following:
-```console
-gpg: Signature made Fri Jan 22 23:22:10 2021 UTC
-gpg:                using RSA key C79F76DAB29245AE262EC790CEBABB44587E3AE2
-gpg: Good signature from "Mateusz Gozdek <mgozdekof@gmail.com>" [unknown]
-```
-
-The output will also include the following:
-```console
-gpg: WARNING: This key is not certified with a trusted signature!
-gpg:          There is no indication that the signature belongs to the owner.
-Primary key fingerprint: 297C 1601 AF63 2225 7066  7925 9718 7FA1 271E C224
-     Subkey fingerprint: C79F 76DA B292 45AE 262E  C790 CEBA BB44 587E 3AE2
-```
-
-Despite this warning, the repository you downloaded is still correct according to the signing key that you downloaded.
-
-To learn more about this warning, read [Tails documentation about verifying images](https://tails.boum.org/install/download/index.en.html#command-line).
 
 ##### Fetching dependencies
 
@@ -1080,13 +1104,13 @@ export OBV_ID=OBV1 # Paritition label is limited to 16 characters.
 Now, run the command below to examine the script which will create a new GPT partition table on your selected device and create one big partition on it:
 
 ```sh
-cat ./scripts/partition-offline-backup-volume.sh
+cat ./secure-and-reproducible-arch-linux-testing/scripts/partition-offline-backup-volume.sh
 ```
 
 Once you confirm, that the script is safe to run, run it:
 
 ```sh
-./scripts/partition-offline-backup-volume.sh
+./secure-and-reproducible-arch-linux-testing/scripts/partition-offline-backup-volume.sh
 ```
 
 Now, let's create a LUKS container on partition we created using the command below:
