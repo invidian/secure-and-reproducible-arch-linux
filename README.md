@@ -194,12 +194,20 @@ The main motivation for this project is to gather and combine various best pract
   * [Hardware Bootstrapping](#hardware-bootstrapping)
     + [Generating hardware secrets](#generating-hardware-secrets)
       - [Booting Recovery Volume in Offline mode](#booting-recovery-volume-in-offline-mode)
+      - [Mounting Offline Backup Volume](#mounting-offline-backup-volume)
+      - [Selecting hardware hostname](#selecting-hardware-hostname)
       - [Generate Disk Encryption Recovery Key](#generate-disk-encryption-recovery-key)
       - [Generate BIOS password](#generate-bios-password)
-      - [Copying generated Disk Encryption Recovery Key into Temporary Volume](#copying-generated-disk-encryption-recovery-key-into-temporary-volume)
+      - [Copying generated Disk Encryption Recovery Key into a Temporary Volume](#copying-generated-disk-encryption-recovery-key-into-a-temporary-volume)
+      - [Sync data between your copies of Offline Backup Volume](#sync-data-between-your-copies-of-offline-backup-volume)
+      - [Summary](#summary-5)
     + [Build Recovery Volume with new hardware profile](#build-recovery-volume-with-new-hardware-profile)
-    + [Setup BIOS password](#setup-bios-password)
-    + [Summary](#summary-5)
+    + [BIOS Setup](#bios-setup)
+      - [Enter BIOS](#enter-bios)
+      - [Setting password](#setting-password)
+      - [Entering Secure Boot Setup Mode](#entering-secure-boot-setup-mode)
+      - [Clearing TPM](#clearing-tpm)
+    + [Summary](#summary-6)
   * [Day-2 Operations](#day-2-operations)
     + [Machine Maintenance](#machine-maintenance)
       - [Booting up](#booting-up)
@@ -207,7 +215,6 @@ The main motivation for this project is to gather and combine various best pract
       - [Updating system configuration and rebuilding Recovery ISO image](#updating-system-configuration-and-rebuilding-recovery-iso-image)
       - [Updating Kernel](#updating-kernel)
       - [Updating BIOS](#updating-bios)
-      - [Bootstrapping new hardware](#bootstrapping-new-hardware)
     + [YubiKey Maintenance](#yubikey-maintenance)
       - [Adding new OATH-TOTP secret](#adding-new-oath-totp-secret)
       - [Provisioning new YubiKey](#provisioning-new-yubikey)
@@ -215,6 +222,7 @@ The main motivation for this project is to gather and combine various best pract
         * [Decommissioning old YubiKey device](#decommissioning-old-yubikey-device)
     + [Using Offline Backup Volume](#using-offline-backup-volume)
       - [Accessing](#accessing)
+      - [Syncing data between Offline Backup Volumes](#syncing-data-between-offline-backup-volumes)
       - [Signing someone else's GPG key](#signing-someone-elses-gpg-key)
       - [Storing MFA recovery tokens](#storing-mfa-recovery-tokens)
       - [Extending expiry time of your GPG keys](#extending-expiry-time-of-your-gpg-keys)
@@ -240,7 +248,7 @@ The main motivation for this project is to gather and combine various best pract
     + [Trying out this guide in virtualized environment](#trying-out-this-guide-in-virtualized-environment)
     + [How do you protect booting Recovery OS? Does it need to be protected?](#how-do-you-protect-booting-recovery-os-does-it-need-to-be-protected)
     + [Block-based backups vs File-based backups](#block-based-backups-vs-file-based-backups)
-    + [Credentials which shouldn't be stored in [Daily Password Manager](#daily-password-manager)](#credentials-which-shouldnt-be-stored-in-daily-password-manager%23daily-password-manager)
+    + [Credentials which shouldn't be stored in Daily Password Manager](#credentials-which-shouldnt-be-stored-in-daily-password-manager)
       - [MFA Recovery Codes/Tokens](#mfa-recovery-codestokens)
       - [Password Salt](#password-salt)
       - [API Keys for services with MFA enabled](#api-keys-for-services-with-mfa-enabled)
@@ -249,7 +257,7 @@ The main motivation for this project is to gather and combine various best pract
       - [GPG AdminPIN and PIV PUK](#gpg-adminpin-and-piv-puk)
       - [Disk encryption recovery keys](#disk-encryption-recovery-keys)
       - [TPM Passwords](#tpm-passwords)
-    + [Credentials which can be stored in [Daily Password Manager](#daily-password-manager)](#credentials-which-can-be-stored-in-daily-password-manager%23daily-password-manager)
+    + [Credentials which can be stored in Daily Password Manager](#credentials-which-can-be-stored-in-daily-password-manager)
       - [BIOS Password](#bios-password)
     + [Why Secure Boot keys do not require periodic rotation](#why-secure-boot-keys-do-not-require-periodic-rotation)
     + [Why does Secure Boot keys do not require respecting expiry time](#why-does-secure-boot-keys-do-not-require-respecting-expiry-time)
@@ -2009,6 +2017,8 @@ To save some time on rebooting and mounting volumes, we will generate them right
 
 Encrypted version of Disk Encryption Recovery Key will also be stored in encrypted version in first [Recovery Volume](#recovery-volume), so we can perform regular automated Arch Linux installation.
 
+Head to [Selecting hardware hostname](#selecting-hardware-hostname) step of [Generating hardware secrets](#generating-hardware-secrets) section and follow the steps from there to generate required hardware secrets, then return here.
+
 ### Saving and synchronizing data between Offline Backup Volumes
 
 At this point, you should have all secrets created or generated, which are covered by the general bootstrap process. There will be more secrets to generate, which will be done for each machine you have, described in [Harware Bootstrapping](#hardware-bootstrapping) section, but this will be done later.
@@ -2231,7 +2241,58 @@ Reboot your machine now and boot it again with Arch Linux ISO. Follow [Configuri
 
 #### Booting Recovery Volume in Offline mode
 
-To generate the secrets, boot Recovery Volume...
+To generate the secrets, boot your Recovery Volume and make sure it stays in Offline mode by stopping `systemd-networkd.service`  unit in first 30 seconds after boot. You should do it using the command below:
+
+```sh
+systemctl stop systemd-networkd.service
+```
+
+#### Mounting Offline Backup Volume
+
+Next, make your Offline Backup Volume available. Use the following commands to identify the right device:
+
+```sh
+ls -d /dev/disk/by-id/* | grep -v -E -- '(-part[0-9]+|by-id/(dm|lvm|wwn|nvme-eui)-)'
+journalctl -fk | grep 'SerialNumber:'
+```
+
+Now plug the device and export information about it:
+
+```sh
+export OBV_DEVICE=<your full to device>
+export OBV_ID=OBV1
+```
+
+And run commands below to decrypt and mount it:
+
+```sh
+export PARTITION=/dev/disk/by-partlabel/$OBV_ID
+cryptsetup open $PARTITION $OBV_ID
+export MOUNTPOINT=/mnt/$OBV_ID
+mkdir -p $MOUNTPOINT && mount /dev/mapper/$OBV_ID $MOUNTPOINT
+```
+
+Finally, make your Offline Backup Volume your working directory using the command below:
+
+```sh
+cd $MOUNTPOINT
+```
+
+#### Selecting hardware hostname
+
+Now, you need to decide how your machine will be named. This name will be used to identify device-unique secrets and as a `hostname` in your OS installation.
+
+Run the command below to learn about allowed characters, length etc of the hostname:
+
+```sh
+man hostname.7
+```
+
+Once you decide on something, export information about it using this command:
+
+```sh
+export TARGET_HOSTNAME=dellxps15johndoe
+```
 
 #### Generate Disk Encryption Recovery Key
 
@@ -2239,16 +2300,10 @@ If your Secure Boot with TPM setup breaks for some reason, you will be able to u
 
 It is recommended, that your Disk Encryption Recovery Key is at least 55 characters long, consisting of lower and upper case letters and numbers, which should give you at least 256 bits of entropy using [zxcvbn](https://dropbox.tech/security/zxcvbn-realistic-password-strength-estimation) algorithm. This should be sufficient to provide good protection (more described in [AES-256 Security](#aes-256-security) section) and be short enough it can be typed by hand.
 
-To generate Disk Encryption Recovery Key, first decide on hostname of your first machine. Then export this information using the command below:
+To generate Disk Encryption Recovery Key, run the command below:
 
 ```sh
-export FIRST_HOSTNAME=dellxps15johndoe
-```
-
-Now, generate the recovery key:
-
-```sh
-export LC_CTYPE=C; dd if=/dev/urandom 2>/dev/null | tr -cd '[:alnum:]' | fold -w55 | head -1 > ${FIRST_HOSTNAME}-disk-encryption-recovery-key
+export LC_CTYPE=C; dd if=/dev/urandom 2>/dev/null | tr -cd '[:alnum:]' | fold -w55 | head -1 > ${TARGET_HOSTNAME}-disk-encryption-recovery-key
 ```
 
 #### Generate BIOS password
@@ -2259,16 +2314,18 @@ However, it is still good to password to be unique per hardware and stored in yo
 
 Different BIOS-es have different password policies, so you may need to check if your BIOS is not limited to shorter maximum length than the default one used below. Usually 8 characters is acceptable, sometimes it's a limit, and sometimes it's a minimum length for "strong" password.
 
-Command below will generate a BIOS password for your hardware and print it to the screen, so you can either write it down on a piece of paper for now (which later on should be destroyed) or you can save it in your Daily Password Manager if you have one. This way, password will be easy to access during [Hardware bootstrapping](#hardware-bootstrapping) process.
+Command below will generate a BIOS password for your hardware and print it to the screen. If you have your Daily Password Manager available, you can save the password there.
+
+If you only have one hardware available, write down printed BIOS password on a piece of paper, so you can use it in the next step, then destroy the piece of paper.
 
 ```sh
 export BIOS_PASSWORD_LENGTH=8
-export LC_CTYPE=C; dd if=/dev/urandom 2>/dev/null | tr -cd '[:alnum:]' | fold -w${BIOS_PASSWORD_LENGTH} | head -1 | tee ${FIRST_HOSTNAME}-bios-password
+export LC_CTYPE=C; dd if=/dev/urandom 2>/dev/null | tr -cd '[:alnum:]' | fold -w${BIOS_PASSWORD_LENGTH} | head -1 | tee ${TARGET_HOSTNAME}-bios-password
 ```
 
 BIOS password security is described with more details in [BIOS Password](#bios-password) section.
 
-#### Copying generated Disk Encryption Recovery Key into Temporary Volume
+#### Copying generated Disk Encryption Recovery Key into a Temporary Volume
 
 If you want to make your Offline Backup Volume available again, run the following commands to identify the right device:
 
@@ -2287,7 +2344,7 @@ export TMP_ID=tmp
 And run commands below to mount it:
 
 ```sh
-export PARTITION=/dev/disk/by-partlabel/$TMP_ID
+export PARTITION=${TMP_DEVICE}-part1
 export MOUNTPOINT=/mnt/$TMP_ID
 mkdir -p $MOUNTPOINT && mount $PARTITION $MOUNTPOINT
 ```
@@ -2296,16 +2353,48 @@ Then, create encrypted copy of generated Disk Encryption Recovery Key:
 
 ```sh
 export RECIPIENT=$(gpg --with-colons --list-keys $KEYID | grep ^uid | head -n1 | cut -d: -f10)
-gpg --encrypt --armor --recipient "$RECIPIENT" ${FIRST_HOSTNAME}-disk-encryption-recovery-key > /mnt/tmp/${FIRST_HOSTNAME}-disk-encryption-recovery-key.gpg
+gpg --encrypt --armor --recipient "$RECIPIENT" ${TARGET_HOSTNAME}-disk-encryption-recovery-key > /mnt/tmp/${TARGET_HOSTNAME}-disk-encryption-recovery-key.gpg
 ```
+
+#### Sync data between your copies of Offline Backup Volume
+
+Make sure you follow [Syncing data between Offline Backup Volumes](#syncing-data-between-offline-backup-volumes) to keep your Offline Backup Volumes synchronized, so you always have multiple actual copies of your secrets.
+
+#### Summary
+
+If you are following [Bootstrapping](#bootstrapping) process right now, head back to next section of it, which is [Saving and synchronizing data between Offline Backup Volumes](#saving-and-synchronizing-data-between-offline-backup-volumes).
 
 ### Build Recovery Volume with new hardware profile
 
-### Setup BIOS password
+TODO: add steps to add new hardware profile
+
+### BIOS Setup
+
+Next step of preparing your hardware for installing the OS is BIOS configuration.
+
+#### Enter BIOS
+
+Follow your device manual to enter the BIOS. Usually it's done by pressing one of `F12`, `DEL` or `F2` keys right after turning on the device.
+
+#### Setting password
+
+Once you entered the BIOS, first thing to do is to setup new password, which we generated in the previous step. Follow your device manual to do that.
+
+#### Entering Secure Boot Setup Mode
+
+Next thing we need to do right now is to find the Secure Boot settings in your BIOS and remove pre-installed keys from there, which will make machine enter "Setup Mode", which allows rolling in your own keys.
+
+Follow your device manual to do that.
+
+#### Clearing TPM
+
+As part of initial hardware setup, you may also want to check the TPM settings on your device and clear it, to make sure there is no pre-installed objects there.
+
+Again, follow your device manual to do that.
 
 ### Summary
 
-With new Recovery Volume prepared, which supports your new hardware, jump to [OS Installation](#os-installation) section to install OS on your new hardware.
+With everything configured, jump to [OS Installation](#os-installation) section to install OS on your new hardware.
 
 ## Day-2 Operations
 
@@ -2322,8 +2411,6 @@ This section documents various processes, which are needed in daily use, like [U
 #### Updating Kernel
 
 #### Updating BIOS
-
-#### Bootstrapping new hardware
 
 
 ### YubiKey Maintenance
@@ -2347,6 +2434,8 @@ After initial bootstrapping, the following information is stored on your Offline
 - Secure Boot Key Encryption Key
 
 #### Accessing
+
+#### Syncing data between Offline Backup Volumes
 
 #### Signing someone else's GPG key
 
@@ -2447,7 +2536,7 @@ Here is the breakdown of supported features:
 
 This guide prefers file-based backups
 
-### Credentials which shouldn't be stored in [Daily Password Manager](#daily-password-manager)
+### Credentials which shouldn't be stored in Daily Password Manager
 
 This section contains list of credentials which are recommended to not be stored in [Daily Password Manager](#daily-password-manager),
 as storing them there may have security implications if password manager gets compromised.
@@ -2518,9 +2607,9 @@ For TPM1.2, there is only single owner password which is required for all TPM op
 
 With TPM 2.0, each hierarchy (group of objects) can be managed using separate password. This guide only stores few secrets in TPM.
 
-### Credentials which can be stored in [Daily Password Manager](#daily-password-manager)
+### Credentials which can be stored in Daily Password Manager
 
-Depending on your preference, here are the credentials, which you probably can store in your Daily Password Manager and it shouldn't in a significant way
+Depending on your preference, here are the credentials, which you probably can store in your [Daily Password Manager](#daily-password-manager) and it shouldn't in a significant way
 degrade your level of security.
 
 #### [BIOS Password](javascript:void(0);)
