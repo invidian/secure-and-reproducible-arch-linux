@@ -866,7 +866,7 @@ gpg --import invidian.gpg
 Then, run the commands below to fetch and verify this repository:
 
 ```sh
-VERSION=testing
+export VERSION=testing2
 curl -L https://github.com/invidian/secure-and-reproducible-arch-linux/releases/download/${VERSION}/${VERSION}.tar.gz.asc -o ${VERSION}.tar.gz.asc
 curl -L https://github.com/invidian/secure-and-reproducible-arch-linux/archive/${VERSION}.tar.gz -o ${VERSION}.tar.gz
 gpg --verify ${VERSION}.tar.gz.asc ${VERSION}.tar.gz
@@ -900,8 +900,9 @@ export REPOSITORY_PATH=$(pwd)
 Finally, unpack the repository and make it your working directory, so we can use scripts from it in the next steps:
 
 ```sh
-tar zxvf ${VERSION}.tar.gz
-cd secure-and-reproducible-arch-linux-testing/
+export TARGET_DIR=secure-and-reproducible-arch-linux
+mkdir -p ./${TARGET_DIR} && tar zxvf ${VERSION}.tar.gz -C ${TARGET_DIR}
+cd ${TARGET_DIR}/
 ```
 
 Let's also
@@ -978,7 +979,7 @@ The `/mnt/tmp` mountpoint will be used in the next steps.
 With Temporary Volume mounted, copy downloaded repository and associated GPG key into Temporary Volume by running the commands below:
 
 ```sh
-cp -r $REPOSITORY_PATH/secure-and-reproducible-arch-linux-testing/ ./
+cp -r $REPOSITORY_PATH/${TARGET_DIR}/ ./
 ```
 
 ##### Fetching dependencies
