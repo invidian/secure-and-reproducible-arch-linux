@@ -901,7 +901,7 @@ Finally, unpack the repository and make it your working directory, so we can use
 
 ```sh
 export TARGET_DIR=secure-and-reproducible-arch-linux
-mkdir -p ./${TARGET_DIR} && tar zxvf ${VERSION}.tar.gz -C ${TARGET_DIR}
+mkdir -p ./${TARGET_DIR} && tar zxvf ${VERSION}.tar.gz -C ${TARGET_DIR} --strip-components=1
 cd ${TARGET_DIR}/
 ```
 
