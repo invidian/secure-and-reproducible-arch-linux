@@ -939,7 +939,7 @@ cat ./scripts/partition-offline-backup-volume.sh
 Once you confirm, that the script is safe to run, run it:
 
 ```sh
-OBV_DEVICE=$TMP_DEVICE OBV_ID=$TMP_ID./scripts/partition-offline-backup-volume.sh
+OBV_DEVICE=$TMP_DEVICE OBV_ID=$TMP_ID ./scripts/partition-offline-backup-volume.sh
 ```
 
 Now, create a `ext4` filesystem on the newly created partition using the following command:
@@ -996,13 +996,23 @@ Use Terminal opened in previous step or make sure you're in the temporary volume
 # - libp11 - PKCS#11 engine for sbsign, requires to work with YubiKey.
 # - opensc - Smart card tools required for p11tool to detect the YubiKey as smartcard.
 # - ccid - Smart card driver.
-pacman -S hopenpgp-tools yubikey-manager sssd git sbsigntools libp11 opensc ccid
+pacman -Sw hopenpgp-tools yubikey-manager sssd git sbsigntools libp11 opensc ccid
 mkdir packages
 cp /var/cache/pacman/pkg/* ./packages/
 ```
 Next, download hardended GPG configuration we will use when generating GPG keys:
 ```sh
 curl https://raw.githubusercontent.com/drduh/config/master/gpg.conf -o gpg.conf
+```
+
+##### Unmounting Temporary Volume
+
+Before we reboot, we should safely unmount Temporary Volume. To do so, run the commands below:
+
+```sh
+cd $REPOSITORY_PATH && \
+sync && \
+umount /mnt/tmp
 ```
 
 #### Rebooting into offline mode
