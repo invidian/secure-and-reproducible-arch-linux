@@ -1391,6 +1391,8 @@ Now, select option `3.` to change Admin PIN.
 
 You will be prompted for the existing Admin PIN, which by default is `12345678`.
 
+Repeat this step for each of your YubiKeys.
+
 ###### Setting PIN
 
 Now, you can configure your regular PIN using [Master PIN](#master-pin). To do that, run the command below:
@@ -1402,6 +1404,22 @@ gpg --change-pin
 And select option `1.` to change your PIN.
 
 You will be prompted for the existing PIN, which by default is `123456`.
+
+Repeat this step for each of your YubiKeys.
+
+###### Enabling touch requirement
+
+It is recommended to enable touch requirement for any of GPG operation, so in case when your machine gets compromised, attacker won't be able to use your GPG keys.
+
+To enable it for all operations, run the following commands:
+
+```sh
+ykman openpgp set-touch --admin-pin $(cat yubikey-gpg-smartcard-admin-pin) aut on
+ykman openpgp set-touch --admin-pin $(cat yubikey-gpg-smartcard-admin-pin) sig on
+ykman openpgp set-touch --admin-pin $(cat yubikey-gpg-smartcard-admin-pin) enc on
+```
+
+Repeat this step for each of your YubiKeys.
 
 ###### Setting Reset Code
 
@@ -2178,6 +2196,12 @@ Finally, confirm everything:
 
 ```sh
 save
+```
+
+You can verify that your GPG keys has been transferred to YubiKey by running the command below:
+
+```sh
+gpg --card-status
 ```
 
 Now, run the command below to restore your GPG keyring to original state:
