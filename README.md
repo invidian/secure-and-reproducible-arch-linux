@@ -20,6 +20,16 @@ The main motivation for this project is to gather and combine various best pract
 
 In addition, this project was created to automate and document usually manual and complex processes of generating and maintaining used secrets in secure way, installing and configuring Arch Linux as well as managing the data and backups on used machines. Every person dealing with their own data should be aware how to manage and secure it. Every person dealing with secrets should know how to manage them in secure manner. Every Arch Linux user should have automated installation and data restoration process to avoid problems when OS installation gets corrupted, hardware breaks or data gets removed. This guide proposes the approach for handling those processes and describes them in detail.
 
+### Status
+
+At the time of writing, [Assumptions](#assumptions), [Bootstrapping](#bootstrapping) and [Hardware bootstrapping](#hardware-bootstrapping) sections are mostly complete, as they are the base of the project.
+
+[Glossary](#glossary) is partially written.
+
+[Miscellaneous](#miscellaneous) section contains many topics documented as well.
+
+[OS Recovery Volume](#os-recovery-volume) profile, Arch Linux installation automation and [Day-2 Operations](#day-2-operations) are not documented yet.
+
 ## Table of Contents
 
 - [Secure and reproducible Arch Linux](#secure-and-reproducible-arch-linux)
@@ -27,6 +37,7 @@ In addition, this project was created to automate and document usually manual an
     + [Goals](#goals)
     + [Audience](#audience)
     + [Motivation](#motivation)
+    + [Status](#status)
   * [Table of Contents](#table-of-contents)
   * [Assumptions](#assumptions)
     + [Security of your Daily Password Manager](#security-of-your-daily-password-manager)
