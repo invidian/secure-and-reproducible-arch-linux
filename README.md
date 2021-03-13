@@ -16,7 +16,9 @@ This guide is mainly targets developers and system administrators using Linux as
 
 ### Motivation
 
-The main motivation for this project is to gather and combine various best practices
+The main motivation for this project is to gather and combine various best practices around secure use of YubiKeys, Secure Boot, TPM, GPG and other security-oriented technologies implemented using Arch Linux distribution. There is many guides describing each of those technologies, but no so many which combines them to create a complete solution, which satisfy certain assumptions and protects against specific threat models. This guide aims to give you thorough understanding of security practices described here to raise your confidence in them, so you can proof under what conditions you remain secure and to highlight which conditions you should avoid, as your threat model does not protect against them.
+
+In addition, this project was created to automate and document usually manual and complex processes of generating and maintaining used secrets in secure way, installing and configuring Arch Linux as well as managing the data and backups on used machines. Every person dealing with their own data should be aware how to manage and secure it. Every person dealing with secrets should know how to manage them in secure manner. Every Arch Linux user should have automated installation and data restoration process to avoid problems when OS installation gets corrupted, hardware breaks or data gets removed. This guide proposes the approach for handling those processes and describes them in detail.
 
 ## Table of Contents
 
@@ -111,28 +113,26 @@ The main motivation for this project is to gather and combine various best pract
         * [Expanding available disk space](#expanding-available-disk-space)
         * [(Optional) Installing and running graphical interface](#optional-installing-and-running-graphical-interface)
       - [Fetching required resources into temporary volume](#fetching-required-resources-into-temporary-volume)
+        * [Fetching repository](#fetching-repository)
         * [(Optional) Format temporary volume](#optional-format-temporary-volume)
         * [Mount temporary volume](#mount-temporary-volume)
-        * [Fetching repository](#fetching-repository)
-        * [Fetching dependencies](#fetching-dependencies)
+        * [Move repository into Temporary Volume](#move-repository-into-temporary-volume)
+        * [Fetching packages](#fetching-packages)
+        * [(Optional) Building ssss](#optional-building-ssss)
+        * [Fetching recommended GPG client configuration](#fetching-recommended-gpg-client-configuration)
+        * [Unmounting Temporary Volume](#unmounting-temporary-volume)
       - [Rebooting into offline mode](#rebooting-into-offline-mode)
         * [Ensure you will be offline](#ensure-you-will-be-offline)
         * [Mounting temporary volume](#mounting-temporary-volume)
+        * [Ensuring disk space](#ensuring-disk-space)
         * [Installing dependencies offline](#installing-dependencies-offline)
     + [Creating secrets](#creating-secrets)
       - [Master Password](#master-password)
-        * [Recovery](#recovery)
-          + [Sharding](#sharding)
-          + [Distribution](#distribution)
-          + [Periodic verification](#periodic-verification)
-          + [Rotating Master Password](#rotating-master-password)
-          + [Combining shards](#combining-shards)
       - [Backup volumes](#backup-volumes)
         * [Identifying plugged devices](#identifying-plugged-devices)
         * [Formatting](#formatting)
         * [Safe removal](#safe-removal)
         * [Mounting secure volume again](#mounting-secure-volume-again)
-        * [Initializing](#initializing)
         * [Summary](#summary-2)
       - [Master PIN](#master-pin-3)
       - [Configuring YubiKeys](#configuring-yubikeys)
@@ -156,6 +156,7 @@ The main motivation for this project is to gather and combine various best pract
         * [Setting up OpenPGP applet](#setting-up-openpgp-applet)
           + [Setting Admin PIN](#setting-admin-pin)
           + [Setting PIN](#setting-pin-1)
+          + [Enabling touch requirement](#enabling-touch-requirement)
           + [Setting Reset Code](#setting-reset-code)
         * [Configuring and securing other YubiKey applets](#configuring-and-securing-other-yubikey-applets)
       - [Generating GPG keys](#generating-gpg-keys)
@@ -163,6 +164,7 @@ The main motivation for this project is to gather and combine various best pract
         * [Generate keys](#generate-keys)
           + [Generating Master Key](#generating-master-key)
           + [(Optional) Adding extra identities to your Master Key](#optional-adding-extra-identities-to-your-master-key)
+          + [(Optional) Selecting primary identity](#optional-selecting-primary-identity)
           + [Generating Signing key](#generating-signing-key)
           + [Generating Encryption key](#generating-encryption-key)
           + [Generating Authentication Key](#generating-authentication-key)
@@ -171,9 +173,16 @@ The main motivation for this project is to gather and combine various best pract
         * [Checking if YubiKey PIV slot is in use](#checking-if-yubikey-piv-slot-is-in-use)
           + [Checking if YubiKey PIV slot has certificate](#checking-if-yubikey-piv-slot-has-certificate)
           + [Checking if YubiKey PIV slot has key pair](#checking-if-yubikey-piv-slot-has-key-pair)
-        * [Generating Platform Key (PK) and Key Exchange Key (KEK)](#generating-platform-key-pk-and-key-exchange-key-kek)
+        * [Generating keys](#generating-keys)
         * [Transferring Database Key into YubiKeys](#transferring-database-key-into-yubikeys)
         * [Verifying signing capabilities](#verifying-signing-capabilities)
+        * [Summary](#summary-4)
+      - [Master Password Recovery](#master-password-recovery)
+        * [Sharding](#sharding)
+        * [Distribution](#distribution)
+        * [Periodic verification](#periodic-verification)
+        * [Rotating Master Password](#rotating-master-password)
+        * [Combining shards](#combining-shards)
       - [(Optional) Generating Password Salt](#optional-generating-password-salt)
       - [Generating secrets for your first hardware](#generating-secrets-for-your-first-hardware)
     + [Saving and synchronizing data between Offline Backup Volumes](#saving-and-synchronizing-data-between-offline-backup-volumes)
@@ -190,7 +199,7 @@ The main motivation for this project is to gather and combine various best pract
         * [GUI](#gui)
       - [Saving your Arch Linux ISO profile](#saving-your-arch-linux-iso-profile)
       - [Writing your Arch Linux ISO into Recovery Volume](#writing-your-arch-linux-iso-into-recovery-volume)
-    + [Summary](#summary-4)
+    + [Summary](#summary-5)
   * [Hardware Bootstrapping](#hardware-bootstrapping)
     + [Generating hardware secrets](#generating-hardware-secrets)
       - [Booting Recovery Volume in Offline mode](#booting-recovery-volume-in-offline-mode)
@@ -200,14 +209,14 @@ The main motivation for this project is to gather and combine various best pract
       - [Generate BIOS password](#generate-bios-password)
       - [Copying generated Disk Encryption Recovery Key into a Temporary Volume](#copying-generated-disk-encryption-recovery-key-into-a-temporary-volume)
       - [Sync data between your copies of Offline Backup Volume](#sync-data-between-your-copies-of-offline-backup-volume)
-      - [Summary](#summary-5)
+      - [Summary](#summary-6)
     + [Build Recovery Volume with new hardware profile](#build-recovery-volume-with-new-hardware-profile)
     + [BIOS Setup](#bios-setup)
       - [Enter BIOS](#enter-bios)
       - [Setting password](#setting-password)
       - [Entering Secure Boot Setup Mode](#entering-secure-boot-setup-mode)
       - [Clearing TPM](#clearing-tpm)
-    + [Summary](#summary-6)
+    + [Summary](#summary-7)
   * [Day-2 Operations](#day-2-operations)
     + [Machine Maintenance](#machine-maintenance)
       - [Booting up](#booting-up)
@@ -281,6 +290,7 @@ The main motivation for this project is to gather and combine various best pract
     + [OS Recovery Volume](#os-recovery-volume)
     + [MFA/2FA - Multi/Two Factor Authentication](#mfa2fa---multitwo-factor-authentication)
     + [MFA Recovery Token](#mfa-recovery-token)
+  * [Resources](#resources)
 
 ## Assumptions
 
@@ -2980,3 +2990,10 @@ Removable device, which contains your personalized Arch Linux installer.
 
 
 #
+
+## Resources
+
+Here is list of online resources, which were main source of building this guide:
+
+- https://github.com/drduh/YubiKey-Guide - Fantastic guide on using GPG keys with YubiKeys.
+- https://safeboot.dev/ - Awesome project describing use of Secure Boot, TPM and `sd-verity`.
