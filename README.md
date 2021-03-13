@@ -2719,17 +2719,18 @@ Here is the breakdown of supported features:
 
 - Recovery OS uses Secure Boot, which guarantees it's **Authenticity (identity)**.
 - Recovery OS uses `dm-verity` to generate hash of root filesystem, then is then added to the kernel command line parameters with EFISTUB and signed using Secure Boot Database Key. This guarantees it's **integrity**.
+- Booting from USB device usually requires providing BIOS password or enabling USB booting in the BIOS, so an attacker which posses your OS Recovery Volume still won't be able to boot it on your machine.
 - What about possible credentials stored on the image? Private keys for WireGuard installation network? WiFi password? If you encrypt it, how do you decrypt?
-  - There should be no plaintext secrets stored on the image except the WiFi password, which is required to enable installation over local wireless network. An attacker with physical access to your Recovery Image, may have physical access to your Ethernet network anyway, if you do not have 802.1X configured on Ethernet level or additional physical protection on the Ethernet ports.
+  - There should be no plaintext secrets stored on the image except the WiFi password, which is required to enable installation over local wireless network. An attacker with physical access to your Recovery Image, may have physical access to your Ethernet network anyway, if you do not have 802.1X configured on Ethernet level or additional physical protection on the Ethernet ports, as:
     - Limiting/disabling DHCP does not offer any real security.
     - MAC address filtering does not offer good security either, as MAC addresses can be spoofed. It may also be difficult to roll out on some devices.
-    - Security measures should be used on higher levels than MAC addresses (Layer 2) anyway to provide additional security for your network.
+    - Security measures should be also used on higher levels than MAC addresses (Layer 2) anyway to provide additional security for your network, like IP-based firewalls, authentication etc.
   - This guide stores GPG-encrypted Disk Encryption Recovery Keys on Recovery Volume to make them available during installation. For secrets which are not required for unattended boot (e.g. WiFi password), you can use this method to securely store them on Recovery Volume.
   - Storing other types of plaintext secrets in Recovery Image is not supported right now with this guide. If this is what you really need, perhaps you need to replace the `archiso` in Recovery Image build process to perform regular Arch Linux installation, including disk encryption, similar to what we will be finally using, then configuring `overlayfs` combined with `tmpfs` or similar configuration and mount your root partition in read-only mode, to get ISO like environment which cannot be permanently modified while used.
 
 ### Block-based backups vs File-based backups
 
-This guide prefers file-based backups
+This guide prefers file-based backups.
 
 ### Credentials which shouldn't be stored in Daily Password Manager
 
