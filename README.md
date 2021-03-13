@@ -843,7 +843,14 @@ NOTE: 4GB should be sufficient to install all updates, Gnome Shell and Firefox.
 If you want to have a graphical interface during bootstrapping, for example to be able to easily copy-paste the commands which needs to be executed, run the commands below:
 
 ```sh
-pacman -Syyu --ignore linux gnome-shell gnome-terminal firefox gnome-control-center nautilus
+# Ignore linux package (kernel update) to avoid removing kernel modules, which will be required for example for mounting ext4 filesystem.
+# - gnome-shell - Main GUI package.
+# - gnome-terminal - For Terminal in GUI.
+# - firefox - For browsing Web and guide online.
+# - gnome-control-center - For adjusting GUI settings like resolution or mouse.
+# - nautilus - For visually checking files and mounts.
+# - keepassxc - For testing password strength.
+pacman -Syyu --ignore linux gnome-shell gnome-terminal firefox gnome-control-center nautilus keepassxc
 XDG_SESSION_TYPE=wayland dbus-run-session gnome-session
 ```
 
@@ -1076,6 +1083,8 @@ Now we can proceed with the secrets generation.
 First thing to do is to create and memorize your personal [Master Password](#master-password). It will be used to protect your [Daily Password Manager](#daily-password-manager) and to decrypt [Offline Backup Volumes](#offline-backup-volume) and this is the only password you will have to remember.
 
 This password should never be written down or saved to minimize the risk of it leaking.
+
+If you have GUI installed, you can run KeePassXC and use Password Generator feature there to verify strength of your Master Password.
 
 If you forget your Master Password, you will loose access to the secrets mentioned above, which might have severe consequences. To avoid having your Master Password as a single point of failure, later on as part of the bootstrapping process, [Master Password Recovery](#master-password-recovery) section describes how to split your Master Password securely, so in case of emergency, you will be able to recover it.
 
@@ -2510,8 +2519,9 @@ mkdir -p $MOUNTPOINT && mount $PARTITION $MOUNTPOINT
 Then, create encrypted copy of generated Disk Encryption Recovery Key:
 
 ```sh
-export RECIPIENT=$(gpg --with-colons --list-keys $KEYID | grep ^uid | head -n1 | cut -d: -f10)
-gpg --encrypt --armor --recipient "$RECIPIENT" ${TARGET_HOSTNAME}-disk-encryption-recovery-key > ${MOUNTPOINT}/${TARGET_HOSTNAME}-disk-encryption-recovery-key.gpg
+export GNUPGHOME=$(pwd)/gnupg-workspace
+export RECIPIENT=$(gpg --with-colons --list-secret-keys $KEYID | grep '^uid' | head -n1 | cut -d: -f10)
+gpg --encrypt --armor --recipient "$RECIPIENT" < ${TARGET_HOSTNAME}-disk-encryption-recovery-key > ${MOUNTPOINT}/${TARGET_HOSTNAME}-disk-encryption-recovery-key.gpg
 ```
 
 #### Sync data between your copies of Offline Backup Volume
@@ -2521,6 +2531,12 @@ Make sure you follow [Syncing data between Offline Backup Volumes](#syncing-data
 #### Summary
 
 If you are following [Bootstrapping](#bootstrapping) process right now, head back to next section of it, which is [Saving and synchronizing data between Offline Backup Volumes](#saving-and-synchronizing-data-between-offline-backup-volumes).
+
+If you are going to shut down the machine now, run this commands below before unplugging the volumes to remove them securely from the system:
+
+```sh
+cd && sync && umount /mnt/*
+```
 
 ### Build Recovery Volume with new hardware profile
 
