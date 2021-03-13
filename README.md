@@ -840,10 +840,10 @@ NOTE: 4GB should be sufficient to install all updates, Gnome Shell and Firefox.
 
 ##### (Optional) Installing and running graphical interface
 
-If you want to have a graphical interface during bootstrapping, run the following commands:
+If you want to have a graphical interface during bootstrapping, for example to be able to easily copy-paste the commands which needs to be executed, run the commands below:
 
 ```sh
-pacman -Syyu --ignore linux gnome-shell gnome-terminal firefox gnome-control-center
+pacman -Syyu --ignore linux gnome-shell gnome-terminal firefox gnome-control-center nautilus
 XDG_SESSION_TYPE=wayland dbus-run-session gnome-session
 ```
 
@@ -969,7 +969,7 @@ mkdir -p $MOUNTPOINT && mount $PARTITION $MOUNTPOINT
 Finally, make temporary volume your working directory:
 
 ```sh
-cd /mnt/$TMP_ID
+cd $MOUNTPOINT
 ```
 
 The `/mnt/tmp` mountpoint will be used in the next steps.
@@ -982,7 +982,7 @@ With Temporary Volume mounted, copy downloaded repository and associated GPG key
 cp -r $REPOSITORY_PATH/${TARGET_DIR}/ ./
 ```
 
-##### Fetching dependencies
+##### Fetching packages
 
 Use Terminal opened in previous step or make sure you're in the temporary volume as a working directly and run the following commands to download the packages, which we will install once we go into offline mode.
 
@@ -990,17 +990,39 @@ Use Terminal opened in previous step or make sure you're in the temporary volume
 # Breakdown of dependencies:
 # - hopenpgp-tools - Fecommended by https://github.com/drduh/YubiKey-Guide for linting your GPG key.
 # - yubikey-manager - For configuring YubiKey.
-# - sssd - For splitting your Master Password into multiple shards.
+# - ssss - For splitting your Master Password into multiple shards.
 # - git - For versioning and syncing data on Offline Backup Volumes.
 # - sbsigntools - For testing Secure Boot signing using YubiKey.
 # - libp11 - PKCS#11 engine for sbsign, requires to work with YubiKey.
 # - opensc - Smart card tools required for p11tool to detect the YubiKey as smartcard.
 # - ccid - Smart card driver.
 pacman -Sw hopenpgp-tools yubikey-manager sssd git sbsigntools libp11 opensc ccid
-mkdir packages
+mkdir -p packages
 cp /var/cache/pacman/pkg/* ./packages/
 ```
+
+##### (Optional) Building ssss
+
+In [Master Password Recovery](#recovery) section, which we will get to later, there is a procedure described for recovering your [Master Password](#master-password) in case you forget it. If you plan to make use of it, we need to build [Shamir's Secret Sharing](https://en.wikipedia.org/wiki/Shamir%27s_Secret_Sharing) package for Arch Linux. This can be simply done using one of the helpers script in the repository.
+
+First, remember to examine the script before running it to make sure it's safe to execute. This can be done using the command below:
+
+```sh
+cat ./secure-and-reproducible-arch-linux/scripts/build-ssss.sh
+```
+
+After confirming the script, execute it as below:
+
+```sh
+./secure-and-reproducible-arch-linux/scripts/build-ssss.sh
+```
+
+The script will build the `ssss` package and place it in `packages` directory on Temporary Volume, so we can install it offline.
+
+##### Fetching recommended GPG client configuration
+
 Next, download hardended GPG configuration we will use when generating GPG keys:
+
 ```sh
 curl https://raw.githubusercontent.com/drduh/config/master/gpg.conf -o gpg.conf
 ```
@@ -1011,7 +1033,7 @@ Before we reboot, we should safely unmount Temporary Volume. To do so, run the c
 
 ```sh
 cd $REPOSITORY_PATH && \
-sync && \
+sync -f /mnt/tmp/* && \
 umount /mnt/tmp
 ```
 
@@ -1026,6 +1048,16 @@ Before you boot, ensure your Ethernet cable is unplugged to make sure you don't 
 ##### Mounting temporary volume
 
 After the reboot, repeat the steps from [Mount temporary volume](#mount-temporary-volume) to make your Temporary Volume available and your working directory.
+
+##### Ensuring disk space
+
+To make sure you have enough space in RAM filesystem, to install all downloaded packages, run the following command:
+
+```
+mount -o remount,size=4G /run/archiso/cowspace
+```
+
+NOTE: All packages will be installed into RAM, so make sure you have enough of it available.
 
 ##### Installing dependencies offline
 
@@ -1045,45 +1077,7 @@ First thing to do is to create and memorize your personal [Master Password](#mas
 
 This password should never be written down or saved to minimize the risk of it leaking.
 
-##### Recovery
-
-###### Sharding
-
-It is recommended to prepare for a situation, where you cannot remember the Master Password anymore or if anything happens to you, your family is able to get access to your data on your behalf.
-
-To do that securely, this guide recommends using [Shamir's Secret Sharing](https://en.wikipedia.org/wiki/Shamir%27s_Secret_Sharing) implemented with `ssss` CLI tool, which allows you to split your Master Password into 3 or 5 shares, which you can then distribute across your trusted family members, friends, lawyer or a bank. Only after gathering the majority of the shares, one will be able to reveal your Master Password.
-
-While Shamir's Secret Sharing has mixed opinions in terms of security and in certain scenarios it might be insecure, for such a rare use as recovery of the Master Password, it should be sufficient.
-
-You can generate your shares using the following command:
-
-```sh
-ssss-split -t 3 -n 5 -w your-name-master-password
-```
-
-Once you type your Master Password, it will print you 5 shares line by line, which you should securely distribute to your trusted family members, friends, lawyer or a bank.
-
-###### Distribution
-
-When sharing the shards with trusted parties, assume they may not be as technical as you, so make it clear what is a document you give them, under what conditions it should be used and how to use it. It may also include a list of all the parties who posses a shard to make a recovery process easier.
-
-###### Periodic verification
-
-Periodically, for example annually, you should verify with all the parties, that they still have access to their shards and that their contact information is actual. This is recommended to avoid situation, where in case of a need for recovery, you find out that majority of the shards is lost or certain parties are not reachable anymore.
-
-###### Rotating Master Password
-
-In case when you need to change your Master Password, all shards must be re-generated and re-distributed to all parties. Old shards should be destroyed in such scenario.
-
-###### Combining shards
-
-You can test the recovery process by executing the following command:
-
-```sh
-ssss-combine -t 3 -n 5
-```
-
-Now, provide 3 of 5 shards. As a result, you should see your Master Password being printed.
+If you forget your Master Password, you will loose access to the secrets mentioned above, which might have severe consequences. To avoid having your Master Password as a single point of failure, later on as part of the bootstrapping process, [Master Password Recovery](#master-password-recovery) section describes how to split your Master Password securely, so in case of emergency, you will be able to recover it.
 
 #### Backup volumes
 
@@ -1109,7 +1103,7 @@ Once you identified your device, run the following command to make be able to au
 
 ```sh
 export OBV_DEVICE=/dev/disk/by-id/<your device>
-export OBV_ID=OBV1 # Paritition label is limited to 16 characters.
+export OBV_ID=OBV1 # Partition label is limited to 16 characters.
 ```
 
 Now, run the command below to examine the script which will create a new GPT partition table on your selected device and create one big partition on it:
@@ -1156,7 +1150,7 @@ Now, you can repeat the steps above for your another recovery device.
 
 ##### Safe removal
 
-To remove your device safely before unplugging, run the following commands:
+If you need to unplug first volume to plug second one, follow this step to remove your device safely before unplugging. Run the following commands:
 
 ```sh
 sync && \
@@ -1190,17 +1184,17 @@ export MOUNTPOINT=/mnt/$OBV_ID
 mkdir -p $MOUNTPOINT && mount /dev/mapper/$OBV_ID $MOUNTPOINT
 ```
 
-##### Initializing
-
-This guide use `git` to version content on your Offline Backup Volume. This allows:
-
-- Easy synchronization between multiple copies of Offline Backup Volume.
-- Versioning of generated secrets.
-- Improved integrity with Git checksums.
-
 ##### Summary
 
 When you are finished, leave at least one device plugged, decrypted, mounted and make it your working directory, so we can save some files there.
+
+Run command below to make your most recent Offline Backup Volume your working directory:
+
+```sh
+cd $MOUNTPOINT
+```
+
+
 
 #### Master PIN
 
@@ -1373,7 +1367,7 @@ Now, we need to generate PUK, which will be used, when you type your PIN incorre
 To generate PUK, run the command below:
 
 ```sh
-export LC_CTYPE=C; dd if=/dev/urandom 2>/dev/null | tr -cd '[:digit:]' | fold -w6 | head -1 > yubikey-piv-applet-puk
+export LC_CTYPE=C; dd if=/dev/urandom 2>/dev/null | tr -cd '[:digit:]' | fold -w8 | head -1 > yubikey-piv-applet-puk
 ```
 
 Commands above are taken from https://developers.yubico.com/yubico-piv-tool/YubiKey_PIV_introduction.html
@@ -1550,6 +1544,10 @@ john.doe@example.com
 
 **Now leave the `Comment` section empty, as this is [considered](http://web.archive.org/web/20200604060421/https://debian-administration.org/users/dkg/weblog/97) best practice.**
 
+```sh
+
+```
+
 If everything you typed is correct, confirm with `o`:
 
 ```sh
@@ -1560,10 +1558,10 @@ Now, GPG will ask you to provide the passphrase for the key. Considering that by
 
 After confirmation of empty password, your GPG key ID should be printed.
 
-Copy the Key ID in `0x...` format and run the command below to make it available for other commands:
+Now, run the command below to export information about your newly generated key to next commands:
 
 ```sh
-export KEYID=0xEAF8E1976169CB20
+export KEYID=0x$(gpg --list-secret-keys --with-colons | head -n1 | cut -d: -f5)
 ```
 
 ###### (Optional) Adding extra identities to your Master Key
@@ -1591,6 +1589,42 @@ o
 You can repeat this process for as many identities as you have.
 
 **Note: Added identities will be available to everyone, so make deliberate decision if you like to have those IDs being public information.**
+
+###### (Optional) Selecting primary identity
+
+Now, with `gpg`, by default last identity added will be marked as default. This will be marked with a `.` next to the identity number.
+
+```console
+[ultimate] (1)  John Doe <john.doe@example.com>
+[ unknown] (2). John Doe <john@sample.com>
+```
+
+If you want to switch your primary identity, select it using `uid` command. In the example, we will switch the primary UID back to first one:
+
+```sh
+uid 1
+```
+
+GPG should now show you that identity has been selected:
+
+```console
+[ultimate] (1)* John Doe <john.doe@example.com>
+[ unknown] (2). John Doe <john@sample.com>
+```
+
+Now, run `primary` to make selected identity primary. Then unselect the uid to confirm that first one is now primary:
+
+```sh
+primary
+uid 1
+```
+
+You should now see the output similar to the following:
+
+```console
+[ultimate] (1). John Doe <john.doe@example.com>
+[ unknown] (2)  John Doe <john@sample.com>
+```
 
 Finally, type `save` to commit the changes:
 
@@ -1643,6 +1677,8 @@ And confirm again:
 ```sh
 y
 ```
+
+Now, GPG will ask you to provide the passphrase for the key. Considering that by following this guide your key will be stored only offline and on YubiKey, it should be OK to leave the password blank.
 
 Finally, commit the result by using:
 
@@ -1697,6 +1733,8 @@ And confirm again:
 ```sh
 y
 ```
+
+Now, GPG will ask you to provide the passphrase for the key. Considering that by following this guide your key will be stored only offline and on YubiKey, it should be OK to leave the password blank.
 
 Finally, commit the result by using:
 
@@ -1808,6 +1846,8 @@ And confirm again:
 y
 ```
 
+Now, GPG will ask you to provide the passphrase for the key. Considering that by following this guide your key will be stored only offline and on YubiKey, it should be OK to leave the password blank.
+
 Finally, commit the result by using:
 
 ```sh
@@ -1909,17 +1949,8 @@ To check if slot has key pair generated, run the command below:
 **NOTE: This command may wipe the certificate from your slot. Use with caution! It is recommended to check for certificate existence before running this command. **
 
 ```sh
-cat <<EOF | ykman piv generate-certificate -s "testing" 9d -
------BEGIN PUBLIC KEY-----
-MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAn9ck85I/uCbembs25EZF
-21/i0tNSjLAlncsnFeSVCa4ZGj3X9InbCfEUuix9KQe5grq1RGAu4h+SddR7MTFP
-YhQLRlGZ7+g+y8tDWKMhRu6nOZttssUOMVSxFvJnfHFKPEgfYZpPOHwrdiUqavUX
-mQjo52IOcIaFccGVivRB5PT3WHcUbc/sDvybC/j5GfyJ90vfu5heVZW5bvx1aSIs
-x0UfKNFOtAyWPZMigx0+LT4Z+ZOiTOJOAzawMCRGFuQZAOCGUUyMVqGP/+dCRhZb
-FWMTUrC+AUTC2HiIiuUgw5XRY25tJg/10mbZtOMM7la5uXEt7YzExOdFplWZKSte
-LQIDAQAB
------END PUBLIC KEY-----
-EOF
+openssl genrsa -out /tmp/private.pem 2048
+openssl rsa -in /tmp/private.pem -outform PEM -pubout | ykman piv generate-certificate -s "testing" 9d -
 ```
 
 If slot already has some key, this command should return no output.
@@ -1937,7 +1968,7 @@ Error: Certificate generation failed.
 Touch your YubiKey...
 ```
 
-##### Generating Platform Key (PK) and Key Exchange Key (KEK)
+##### Generating keys
 
 Platform Key and Key Exchange Key for Secure Boot will be stored on Offline Backup Volume, as they are not required for daily operation. They will only be used during [Hardware Bootstrapping](#hardware-bootstrapping) process to roll out Database public key.
 
@@ -1945,38 +1976,19 @@ As some BIOSes may not support 4096 bit keys, we use 2048 bit keys.
 
 As Secure Boot verification process to not take certificate expiry time into account, make it expire after one day.
 
-Open Terminal and change working directory to one of Offline Backup Volumes.
-
-First, adjust `IDENTIFIER` variable to your preference.
+As Secure Boot keys generation consist of several commands, we will use helper script. As usual, first examine the script:
 
 ```sh
-export IDENTIFIER="JohnDoe's"
+cat ./secure-and-reproducible-arch-linux/scripts/generate-secure-boot-keys.sh
 ```
 
-Now, run the commands below to generate all necessary keys:
+Now, run it with your personal identifier as an argument to generate the keys:
 
 ```sh
-
-mkdir -p secureboot && cd secureboot
-openssl req -new -x509 -newkey rsa:2048 -subj "/CN=$IDENTIFIER Secure Boot Platform Key/" -keyout PK.key -out PK.crt -days 1 -nodes -sha256
-openssl req -new -x509 -newkey rsa:2048 -subj "/CN=$IDENTIFIER Secure Boot Key Exchange Key/" -keyout KEK.key -out KEK.crt -days 1 -nodes -sha256
-openssl req -new -x509 -newkey rsa:2048 -subj "/CN=$IDENTIFIER kernel-signing key/" -keyout db.key -out db.crt -days 1 -nodes -sha256
-cert-to-efi-sig-list -g "$(uuidgen)" PK.crt PK.esl
-sign-efi-sig-list -k PK.key -c PK.crt PK PK.esl PK.auth
-cert-to-efi-sig-list -g "$(uuidgen)" KEK.crt KEK.esl
-sign-efi-sig-list -a -k PK.key -c PK.crt KEK KEK.esl KEK.auth
-cert-to-efi-sig-list -g "$(uuidgen)" db.crt db.esl
-sign-efi-sig-list -a -k KEK.key -c KEK.crt db db.esl db.auth
-openssl x509 -outform DER -in PK.crt -out PK.cer
-openssl x509 -outform DER -in KEK.crt -out KEK.cer
-openssl x509 -outform DER -in db.crt -out db.cer
-cp -v KEK.esl compound_KEK.esl
-cp -v db.esl compound_db.esl
-sign-efi-sig-list -k PK.key -c PK.crt KEK compound_KEK.esl compound_KEK.auth
-sign-efi-sig-list -k KEK.key -c KEK.crt db compound_db.esl compound_db.auth
+./secure-and-reproducible-arch-linux/scripts/generate-secure-boot-keys.sh "John Doe's"
 ```
 
-Those commands are taken from [Gentoo wiki](https://wiki.gentoo.org/wiki/User:Sakaki/Sakaki%27s_EFI_Install_Guide/Configuring_Secure_Boot_under_OpenRC#Saving_Current_Keystore_Values.2C_and_Creating_New_Keys).
+The content of the script is taken from [Gentoo wiki](https://wiki.gentoo.org/wiki/User:Sakaki/Sakaki%27s_EFI_Install_Guide/Configuring_Secure_Boot_under_OpenRC#Saving_Current_Keystore_Values.2C_and_Creating_New_Keys).
 
 ##### Transferring Database Key into YubiKeys
 
@@ -2058,6 +2070,94 @@ If everything went well, you should get the following output:
 Signature verification OK
 ```
 
+##### Summary
+
+To finish Secure Boot keys generation, go back to Offline Backup Volume root directory:
+
+```sh
+cd ..
+```
+
+#### Master Password Recovery
+
+It is recommended to prepare for a situation, where you cannot remember the Master Password anymore or if anything happens to you, your family is able to get access to your data on your behalf.
+
+To do that securely, this guide recommends using [Shamir's Secret Sharing](https://en.wikipedia.org/wiki/Shamir%27s_Secret_Sharing) implemented with `ssss` CLI tool, which allows you to split your Master Password into 3 or 5 shares, which you can then distribute across your trusted family members, friends, lawyer or a bank. Only after gathering the majority of the shares, one will be able to reveal your Master Password.
+
+While Shamir's Secret Sharing has mixed opinions in terms of security and in certain scenarios it might be insecure, for such a rare use as recovery of the Master Password, it should be sufficient.
+
+##### Sharding
+
+Shards generation commands use a helper script to verify that you shard correct input. Examine the script before running it:
+
+```sh
+cat ./secure-and-reproducible-arch-linux/scripts/safe-input-password.sh
+```
+
+Next, export the identifier for shards, which will be appended at the beginning of each shard:
+
+```sh
+export SHARD_IDENTIFIER=john-doe-master-password
+```
+
+You can generate your shares using the following command:
+
+```sh
+(set -o pipefail && ./secure-and-reproducible-arch-linux/scripts/safe-input-password.sh | ssss-split -w $SHARD_IDENTIFIER -t 3 -n 5 -q | tr \\n ' ' && echo) > master-password-shards
+```
+
+You can see generated shards by inspecting `master-password-shards` file:
+
+```sh
+less master-password-shards
+```
+
+Now, we will encrypt each shard separately using your GPG key, so you can securely distribute it later. To do that, run the command below:
+
+```sh
+for i in {1..5}; do cat master-password-shards | awk -v i=$i '{print $i}' | gpg --encrypt --armor --recipient john.doe@example.com > "master-password-shard-${i}.gpg"; done
+```
+
+This will generate 5 GPG encrypted files, which we will later on copy into temporary volume.
+
+To verify that shards are properly encrypted and functional, use the command below:
+
+```sh
+(for i in 1 2 5; do gpg -d master-password-shard-${i}.gpg; done) | ssss-combine -t 3 | less
+```
+
+It should show you your Master Password.
+
+You can now copy encrypted shards to Temporary Volume for distribution:
+
+```sh
+cp master-password-shard-*.gpg /mnt/tmp/
+```
+
+##### Distribution
+
+When distributing the shards with trusted parties, make sure you do not have access to more than threshold (default is 3) - 1 shards at a time, for example when you decrypt and print them, to minimize the chance for any middle-ware (e.g. printer, your daily OS) to have access to number of shards required to restore the Master Password.
+
+When sharing the shards with trusted parties, assume they may not be as technical as you, so make it clear what is a document you give them, under what conditions it should be used and how to use it. It may also include a list of all the parties who posses a shard to make a recovery process easier.
+
+##### Periodic verification
+
+Periodically, for example annually, you should verify with all the parties, that they still have access to their shards and that their contact information is actual. This is recommended to avoid situation, where in case of a need for recovery, you find out that majority of the shards is lost or certain parties are not reachable anymore.
+
+##### Rotating Master Password
+
+In case when you need to change your Master Password, all shards must be re-generated and re-distributed to all parties. Old shards should be destroyed in such scenario.
+
+##### Combining shards
+
+You can test the recovery process by executing the following command:
+
+```sh
+ssss-combine -t 3 -n 5
+```
+
+Now, provide 3 of 5 shards. As a result, you should see your Master Password being printed.
+
 #### (Optional) Generating Password Salt
 
 If you plan to use [Password Salt](#password-salt), it should be safe to save it on Offline Backup Volume in case you forget it.
@@ -2074,17 +2174,21 @@ Head to [Selecting hardware hostname](#selecting-hardware-hostname) step of [Gen
 
 ### Saving and synchronizing data between Offline Backup Volumes
 
-At this point, you should have all secrets created or generated, which are covered by the general bootstrap process. There will be more secrets to generate, which will be done for each machine you have, described in [Harware Bootstrapping](#hardware-bootstrapping) section, but this will be done later.
+At this point, you should have all secrets created or generated, which are covered by the general bootstrap process. There will be more secrets to generate, which will be done for each machine you have, described in [Hardware Bootstrapping](#hardware-bootstrapping) section, but this will be done later.
 
-At this point, all secrets are stored on a single Offline Backup Volume and we need to sync them into the other volume. To do that, we will be using Git, which will allow us to handle extra checksums, versioning and synchronization of all secrets.
+At this point, all secrets are stored on a single Offline Backup Volume and we need to sync them into the other volume. To do that, we will be using Git, as this allows:
+
+- Easy synchronization between multiple copies of Offline Backup Volume.
+- Versioning of generated secrets.
+- Improved integrity with Git checksums.
 
 #### Configuring Git
 
 First, we will generate basic Git configuration, which will use GPG. This can be done automatically using the command below:
 
 ```sh
-export NAME=$(gpg --with-colons --list-keys $KEYID | grep ^uid | head -n1 | cut -d: -f 10 | cut -d\< -f1 | sed 's/ $//g')
-export EMAIL=$(gpg --with-colons --list-keys $KEYID | grep ^uid | head -n1 | cut -d: -f 10 | cut -d\< -f2 | sed -E 's/( |>)$//g')
+export NAME=$(gpg --with-colons --list-keys $KEYID | grep '^uid' | head -n1 | cut -d: -f 10 | cut -d\< -f1 | sed 's/ $//g')
+export EMAIL=$(gpg --with-colons --list-keys $KEYID | grep '^uid' | head -n1 | cut -d: -f 10 | cut -d\< -f2 | sed -E 's/( |>)$//g')
 export SIGNING_KEY=$(gpg --with-colons --list-keys $KEYID | grep :s: | cut -d: -f5)
 cat <<EOF > ~/.gitconfig
 [user]
@@ -2121,6 +2225,7 @@ Creating a copy of data into another Offline Backup Volume is as simple as runni
 ```sh
 export OBV_ID=OBV2
 export MOUNTPOINT=/mnt/$OBV_ID
+rm -rf ${MOUNTPOINT}/lost+found
 git clone . $MOUNTPOINT
 ```
 
@@ -2138,25 +2243,19 @@ Then, change your working directory to the other Offline Backup Volume, for exam
 ```sh
 export OBV_ID=OBV2
 export MOUNTPOINT=/mnt/$OBV_ID
-cd $MOUNTPOINT
+git -C $MOUNTPOINT pull --ff-only origin master
 ```
 
-And finally, run:
-
-```
-git pull
-```
-
-And if you want to pull from 2nd copy into the first one, make sure you configure the right origin URL by running the command as bellow:
+And if you want to pull from 2nd copy into the first one, make sure you configure the right origin URL by running the command as below:
 
 ```sh
-git remote set-url origin /mnt/$OBV_ID
+git remote add origin /mnt/$OBV_ID
 ```
 
 And also run:
 
 ```sh
-git pull
+git pull --ff-only origin master
 ```
 
 ### Transferring GPG keys into YubiKeys
@@ -2260,14 +2359,14 @@ gpg --export --armor $KEYID > /mnt/tmp/gpg-public-key.gpg
 Next, copy Secure Boot certificates in various formats, to make sure we have format available, which is compatible with your BIOS, which will be needed for [Hardware Bootstrapping](#hardware-bootstrapping):
 
 ```sh
-mkdir /mnt/tmp/secureboot
+mkdir -p /mnt/tmp/secureboot
 cp secureboot/compound_db.* secureboot/compound_KEK.* secureboot/db.{auth,cer,crt,esl} secureboot/KEK.{auth,cer,crt,esl} secureboot/PK.{auth,cer,crt,esl} /mnt/tmp/secureboot/
 ```
 
 Now, you can unmount both Temporary Volume and Offline Backup Volumes by running the commands below:
 
 ```sh
-sync && umount /mnt/*
+cd && sync && umount /mnt/*
 ```
 
 Once finished, make sure you unplug your Offline Backup Volumes. Remember to never plug them into the machine connected to the network.
@@ -2412,7 +2511,7 @@ Then, create encrypted copy of generated Disk Encryption Recovery Key:
 
 ```sh
 export RECIPIENT=$(gpg --with-colons --list-keys $KEYID | grep ^uid | head -n1 | cut -d: -f10)
-gpg --encrypt --armor --recipient "$RECIPIENT" ${TARGET_HOSTNAME}-disk-encryption-recovery-key > /mnt/tmp/${TARGET_HOSTNAME}-disk-encryption-recovery-key.gpg
+gpg --encrypt --armor --recipient "$RECIPIENT" ${TARGET_HOSTNAME}-disk-encryption-recovery-key > ${MOUNTPOINT}/${TARGET_HOSTNAME}-disk-encryption-recovery-key.gpg
 ```
 
 #### Sync data between your copies of Offline Backup Volume
