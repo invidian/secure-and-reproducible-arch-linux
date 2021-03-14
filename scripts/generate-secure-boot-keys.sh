@@ -10,7 +10,7 @@ test -d secureboot && (echo "Secure Boot keys already generated. Run 'rm -r ./se
 mkdir -p secureboot && cd secureboot
 openssl req -new -x509 -newkey rsa:2048 -subj "/CN=$IDENTIFIER Secure Boot Platform Key/" -keyout PK.key -out PK.crt -days 1 -nodes -sha256
 openssl req -new -x509 -newkey rsa:2048 -subj "/CN=$IDENTIFIER Secure Boot Key Exchange Key/" -keyout KEK.key -out KEK.crt -days 1 -nodes -sha256
-openssl req -new -x509 -newkey rsa:2048 -subj "/CN=$IDENTIFIER kernel-signing key/" -keyout db.key -out db.crt -days 1 -nodes -sha256
+openssl req -new -x509 -newkey rsa:2048 -subj "/CN=$IDENTIFIER Signing Key/" -keyout db.key -out db.crt -days 1 -nodes -sha256
 cert-to-efi-sig-list -g "$(uuidgen)" PK.crt PK.esl
 sign-efi-sig-list -k PK.key -c PK.crt PK PK.esl PK.auth
 cert-to-efi-sig-list -g "$(uuidgen)" KEK.crt KEK.esl

@@ -147,6 +147,10 @@ At the time of writing, [Assumptions](#assumptions), [Bootstrapping](#bootstrapp
         * [Summary](#summary-2)
       - [Master PIN](#master-pin-3)
       - [Configuring YubiKeys](#configuring-yubikeys)
+        * [Configuring applications](#configuring-applications)
+          + [Generating configuration lock code](#generating-configuration-lock-code)
+          + [Setting configuration lock code](#setting-configuration-lock-code)
+          + [Enabling required interfaces](#enabling-required-interfaces)
         * [Setting up HMAC-SHA1 Challenge-Response](#setting-up-hmac-sha1-challenge-response)
           + [Swapping slots](#swapping-slots)
           + [Checking existing Challenge-Response configuration](#checking-existing-challenge-response-configuration)
@@ -164,7 +168,7 @@ At the time of writing, [Assumptions](#assumptions), [Bootstrapping](#bootstrapp
           + [Setting PUK](#setting-puk)
           + [Setting PIN](#setting-pin)
           + [Summary](#summary-3)
-        * [Setting up OpenPGP applet](#setting-up-openpgp-applet)
+        * [(Optional) Setting up OpenPGP applet](#optional-setting-up-openpgp-applet)
           + [Setting Admin PIN](#setting-admin-pin)
           + [Setting PIN](#setting-pin-1)
           + [Enabling touch requirement](#enabling-touch-requirement)
@@ -176,7 +180,7 @@ At the time of writing, [Assumptions](#assumptions), [Bootstrapping](#bootstrapp
           + [Generating Master Key](#generating-master-key)
           + [(Optional) Adding extra identities to your Master Key](#optional-adding-extra-identities-to-your-master-key)
           + [(Optional) Selecting primary identity](#optional-selecting-primary-identity)
-          + [Generating Signing key](#generating-signing-key)
+          + [(Optional) Generating Signing key](#optional-generating-signing-key)
           + [Generating Encryption key](#generating-encryption-key)
           + [Generating Authentication Key](#generating-authentication-key)
           + [(Optional) Signing new Master Key with your existing key](#optional-signing-new-master-key-with-your-existing-key)
@@ -187,7 +191,6 @@ At the time of writing, [Assumptions](#assumptions), [Bootstrapping](#bootstrapp
         * [Generating keys](#generating-keys)
         * [Transferring Database Key into YubiKeys](#transferring-database-key-into-yubikeys)
         * [Verifying signing capabilities](#verifying-signing-capabilities)
-        * [Summary](#summary-4)
       - [Master Password Recovery](#master-password-recovery)
         * [Sharding](#sharding)
         * [Distribution](#distribution)
@@ -196,12 +199,22 @@ At the time of writing, [Assumptions](#assumptions), [Bootstrapping](#bootstrapp
         * [Combining shards](#combining-shards)
       - [(Optional) Generating Password Salt](#optional-generating-password-salt)
       - [Generating secrets for your first hardware](#generating-secrets-for-your-first-hardware)
+      - [(Optional) Generating PIV authentication certificate](#optional-generating-piv-authentication-certificate)
+      - [(Optional) Generating PIV encryption certificate](#optional-generating-piv-encryption-certificate)
+      - [(Optional) Adding PIV certificates into GPG Master Key](#optional-adding-piv-certificates-into-gpg-master-key)
+        * [Configuring gpg-agent and gnupg-pkcs11-scd](#configuring-gpg-agent-and-gnupg-pkcs11-scd)
+        * [Detecting key grips](#detecting-key-grips)
+        * [Adding keys to Master Key](#adding-keys-to-master-key)
+          + [Adding authentication key](#adding-authentication-key)
+          + [Adding signing key](#adding-signing-key)
+          + [Adding encryption key](#adding-encryption-key)
     + [Saving and synchronizing data between Offline Backup Volumes](#saving-and-synchronizing-data-between-offline-backup-volumes)
-      - [Configuring Git](#configuring-git)
       - [Initializing repository](#initializing-repository)
+      - [Configuring Git](#configuring-git)
+      - [Committing all data](#committing-all-data)
       - [Initial sync into other Offline Backup Volumes](#initial-sync-into-other-offline-backup-volumes)
       - [Syncing further changes](#syncing-further-changes)
-    + [Transferring GPG keys into YubiKeys](#transferring-gpg-keys-into-yubikeys)
+    + [(Optional) Transferring GPG keys into YubiKeys](#optional-transferring-gpg-keys-into-yubikeys)
     + [Copying public keys and certificates into Temporary Volume](#copying-public-keys-and-certificates-into-temporary-volume)
     + [Creating first Arch Linux bootable USB device](#creating-first-arch-linux-bootable-usb-device)
       - [Customizing your Arch Linux ISO profile](#customizing-your-arch-linux-iso-profile)
@@ -210,7 +223,7 @@ At the time of writing, [Assumptions](#assumptions), [Bootstrapping](#bootstrapp
         * [GUI](#gui)
       - [Saving your Arch Linux ISO profile](#saving-your-arch-linux-iso-profile)
       - [Writing your Arch Linux ISO into Recovery Volume](#writing-your-arch-linux-iso-into-recovery-volume)
-    + [Summary](#summary-5)
+    + [Summary](#summary-4)
   * [Hardware Bootstrapping](#hardware-bootstrapping)
     + [Generating hardware secrets](#generating-hardware-secrets)
       - [Booting Recovery Volume in Offline mode](#booting-recovery-volume-in-offline-mode)
@@ -220,14 +233,14 @@ At the time of writing, [Assumptions](#assumptions), [Bootstrapping](#bootstrapp
       - [Generate BIOS password](#generate-bios-password)
       - [Copying generated Disk Encryption Recovery Key into a Temporary Volume](#copying-generated-disk-encryption-recovery-key-into-a-temporary-volume)
       - [Sync data between your copies of Offline Backup Volume](#sync-data-between-your-copies-of-offline-backup-volume)
-      - [Summary](#summary-6)
+      - [Summary](#summary-5)
     + [Build Recovery Volume with new hardware profile](#build-recovery-volume-with-new-hardware-profile)
     + [BIOS Setup](#bios-setup)
       - [Enter BIOS](#enter-bios)
       - [Setting password](#setting-password)
       - [Entering Secure Boot Setup Mode](#entering-secure-boot-setup-mode)
       - [Clearing TPM](#clearing-tpm)
-    + [Summary](#summary-7)
+    + [Summary](#summary-6)
   * [Day-2 Operations](#day-2-operations)
     + [Machine Maintenance](#machine-maintenance)
       - [Booting up](#booting-up)
@@ -933,14 +946,12 @@ mkdir -p ./${TARGET_DIR} && tar zxvf ${VERSION}.tar.gz -C ${TARGET_DIR} --strip-
 cd ${TARGET_DIR}/
 ```
 
-Let's also
-
 ##### (Optional) Format temporary volume
 
 Once running Arch, plug your USB devices which will serve as a temporary volume, then use the command below to identify plugged devices:
 
 ```sh
-ls -d /dev/disk/by-id/* | grep -v -E -- '(-part[0-9]+|by-id/(dm|lvm|wwn|nvme-eui)-)'
+ls -d /dev/disk/by-id/* | grep -v -E -- '(-part[0-9]+|by-id/(dm|lvm|wwn|nvme-eui|ata)-)'
 ```
 
 If you are unsure, which of your device is which, in care of removable devices, you can run the following command:
@@ -1018,13 +1029,14 @@ Use Terminal opened in previous step or make sure you're in the temporary volume
 # Breakdown of dependencies:
 # - hopenpgp-tools - Fecommended by https://github.com/drduh/YubiKey-Guide for linting your GPG key.
 # - yubikey-manager - For configuring YubiKey.
-# - ssss - For splitting your Master Password into multiple shards.
 # - git - For versioning and syncing data on Offline Backup Volumes.
 # - sbsigntools - For testing Secure Boot signing using YubiKey.
 # - libp11 - PKCS#11 engine for sbsign, requires to work with YubiKey.
 # - opensc - Smart card tools required for p11tool to detect the YubiKey as smartcard.
 # - ccid - Smart card driver.
-pacman -Sw hopenpgp-tools yubikey-manager sssd git sbsigntools libp11 opensc ccid
+# - efitools - For transforming Secure Boot signature lists.
+# - gnupg-pkcs11-scd - For using PIV applet for GPG.
+pacman -Syyw hopenpgp-tools yubikey-manager git sbsigntools libp11 opensc ccid efitools gnupg-pkcs11-scd
 mkdir -p packages
 cp /var/cache/pacman/pkg/* ./packages/
 ```
@@ -1116,7 +1128,7 @@ If you forget your Master Password, you will loose access to the secrets mention
 With your new Master Password, plug your USB devices which will serve as a [Offline Backup Volumes](#offline-backup-volume), then use the command below to identify plugged devices:
 
 ```sh
-ls -d /dev/disk/by-id/* | grep -v -E -- '(-part[0-9]+|by-id/(dm|lvm|wwn|nvme-eui)-)'
+ls -d /dev/disk/by-id/* | grep -v -E -- '(-part[0-9]+|by-id/(dm|lvm|wwn|nvme-eui|ata)-)'
 ```
 
 If you are unsure, which of your device is which, in care of removable devices, you can run the following command:
@@ -1139,13 +1151,13 @@ export OBV_ID=OBV1 # Partition label is limited to 16 characters.
 Now, run the command below to examine the script which will create a new GPT partition table on your selected device and create one big partition on it:
 
 ```sh
-cat ./secure-and-reproducible-arch-linux-testing/scripts/partition-offline-backup-volume.sh
+cat ./secure-and-reproducible-arch-linux/scripts/partition-offline-backup-volume.sh
 ```
 
 Once you confirm, that the script is safe to run, run it:
 
 ```sh
-./secure-and-reproducible-arch-linux-testing/scripts/partition-offline-backup-volume.sh
+./secure-and-reproducible-arch-linux/scripts/partition-offline-backup-volume.sh
 ```
 
 Now, let's create a LUKS container on partition we created using the command below:
@@ -1194,7 +1206,7 @@ cryptsetup close /dev/mapper/$OBV_ID
 If you want to make your Offline Backup Volume available again, run the following commands to identify the right device:
 
 ```sh
-ls -d /dev/disk/by-id/* | grep -v -E -- '(-part[0-9]+|by-id/(dm|lvm|wwn|nvme-eui)-)'
+ls -d /dev/disk/by-id/* | grep -v -E -- '(-part[0-9]+|by-id/(dm|lvm|wwn|nvme-eui|ata)-)'
 journalctl -fk | grep 'SerialNumber:'
 ```
 
@@ -1237,6 +1249,90 @@ PIN will be used for:
 
 #### Configuring YubiKeys
 
+##### Configuring applications
+
+First thing to do when you configure your YubiKey is to ensure that all required interfaces it can expose are enabled and that they are secure.
+
+###### Generating configuration lock code
+
+First, using the command below, we generate the configuration lock code:
+
+```sh
+xxd -ps -l 16 /dev/urandom > yubikey-configuration-lock-code
+```
+
+###### Setting configuration lock code
+
+Now, set the lock code using the command below:
+
+```sh
+ykman config set-lock-code --new-lock-code $(cat yubikey-configuration-lock-code)
+```
+
+###### Enabling required interfaces
+
+This guide requires OTP application to be enabled over USB for KeePassXC HMAC-SHA1 Challenge-Response access, so enable it using the command below:
+
+```sh
+ykman config usb --enable OTP --lock-code $(cat yubikey-configuration-lock-code)
+```
+
+Now, if you are going to access your Daily Password Manager from mobile device over NFC, enable OTP over NFC as well:
+
+```sh
+ykman config nfc --enable OTP --lock-code $(cat yubikey-configuration-lock-code)
+```
+
+If you plan to store TOTP codes on your YubiKey, enable `OATH` application:
+
+```sh
+ykman config usb --enable OATH --lock-code $(cat yubikey-configuration-lock-code)
+```
+
+And similarly, if you plan to use this feature from mobile device over NFC, enable it with NFC:
+
+```sh
+ykman config nfc --enable OATH --lock-code $(cat yubikey-configuration-lock-code)
+```
+
+For common web authentication protocols, enable `U2F` and `FIDO2`:
+
+```sh
+ykman config usb --enable U2F --enable FIDO2 --lock-code $(cat yubikey-configuration-lock-code)
+```
+
+If you plan to use them over NFC, enable that:
+
+```sh
+ykman config nfc --enable U2F --enable FIDO2 --lock-code $(cat yubikey-configuration-lock-code)
+```
+
+Next, enable PIV applet for Secure Boot signing and possible PKCS#11 usage (e.g. S/MIME email encryption):
+
+```sh
+ykman config usb --enable PIV --lock-code $(cat yubikey-configuration-lock-code)
+```
+
+And for NFC if you plan to use it:
+
+```sh
+ykman config nfc --enable PIV --lock-code $(cat yubikey-configuration-lock-code)
+```
+
+Finally, enable OpenPGP applet for native GPG support:
+
+```sh
+ykman config usb --enable OPGP --lock-code $(cat yubikey-configuration-lock-code)
+```
+
+And if you plan to use it over NFC, for example with [OpenKeychain](https://www.openkeychain.org/):
+
+```sh
+ykman config nfc --enable OPGP --lock-code $(cat yubikey-configuration-lock-code)
+```
+
+**NOTE: `ykman mode` is a simplified interface for `ykman config [usb|nfc]`. It manages the same settings, but do not support lock code.**
+
 ##### Setting up HMAC-SHA1 Challenge-Response
 
 ###### Swapping slots
@@ -1254,6 +1350,8 @@ To swap the slots, run the following command:
 ```sh
 ykman otp swap
 ```
+
+**NOTE: If you have access code configured on any of the slots, swapping will fail! You must remove access code from both slots to be able to swap them.**
 
 This command is non destructive and you can run it as many times as you want. Slots will be swapped each time.
 
@@ -1311,18 +1409,12 @@ ykman otp settings --new-access-code $(cat yubikey-slot-2-hmac-sha1-challenge-re
 To verify that your access code is functional, you can run the command below:
 
 ```sh
-ykman otp swap
+ykman otp settings --delete-access-code 1
 ```
 
-It should fail with the output similar to below:
+It should fail with the error similar to below:
 
 ```console
-$ ykman otp swap
-Swap the two slots of the YubiKey? [y/N]: y
-Swapping slots...
-Usage: ykman otp swap [OPTIONS]
-Try 'ykman otp swap -h' for help.
-
 Error: Failed to write to the YubiKey. Make sure the device does not have restricted access.
 ```
 
@@ -1382,7 +1474,19 @@ export LC_CTYPE=C; dd if=/dev/urandom 2>/dev/null | tr -d '[:lower:]' | tr -cd '
 
 ###### Configuring Management Key
 
-To use generated Management Key, run the command below for each YubiKey plugged:
+To use generated Management Key make sure you have `pcscd.service` unit running by executing the following command:
+
+```sh
+systemctl start pcscd.service
+```
+
+You can check it's status using the command below:
+
+```sh
+systemctl status pcscd.service
+```
+
+When the service is running, run the command below for each YubiKey plugged:
 
 ```sh
 ykman piv change-management-key --management-key 010203040506070801020304050607080102030405060708 --new-management-key $(cat yubikey-piv-applet-management-key)
@@ -1424,7 +1528,9 @@ ykman piv change-pin -P 123456
 
 For now, we do not generate any secrets using PIV applet. This will be done at later stage when we generate Secure Boot keys.
 
-##### Setting up OpenPGP applet
+##### (Optional) Setting up OpenPGP applet
+
+**If you plan to use PIV certificates for GPG sub-keys and not utilize OpenPGP applet in YubiKey, you can skip this section.**
 
 This guide use GPG keys to protect main part of disk encryption keys, as well for signing Git objects. This means we need to configure OpenPGP applet on YubiKeys to act as a GPG smartcard.
 
@@ -1527,10 +1633,10 @@ First thing to do is to generate Master Key, which will be stored only on Offlin
 gpg --expert --full-generate-key
 ```
 
-Now, select option:
+Now, select option `(11) ECC (set your own capabilities)`:
 
 ```
-ECC (set your own capabilities)
+11
 ```
 
 We use ECC as it is recommended algorithm nowadays.
@@ -1662,7 +1768,9 @@ Finally, type `save` to commit the changes:
 save
 ```
 
-###### Generating Signing key
+###### (Optional) Generating Signing key
+
+**NOTE: If you would like to use PIV keys for GPG, you can skip this step.**
 
 Next key we need to generate is a Signing key, which will be used to sign information you generate like emails or git objects to proof they are coming from you. This key will be stored on YubiKey, but to be able to use the same key on both YubiKeys for redundancy, it must be generated offline, then transferred into both YubiKeys.
 
@@ -1720,6 +1828,8 @@ Signing key can also be saved without password, as it will be transferred into Y
 
 ###### Generating Encryption key
 
+**NOTE: If you would like to use PIV keys for GPG, you can skip this step.**
+
 Next key to generate is Encryption key, which will be used to encrypt the data which only you will be able to decrypt. The procedure is almost identical to generating Signing key.
 
 To generate the key, run the command below:
@@ -1776,6 +1886,8 @@ Encryption key can also be saved without password, as it will be transferred int
 
 ###### Generating Authentication Key
 
+**NOTE: If you would like to use PIV keys for GPG, you can skip this step.**
+
 Last key we will generate is Authentication key. This key is used when you log in into remote servers to prove your identity. This can can be used for example for logging in using SSH. GPG also supports TLS authentication.
 
 To generate the key, run the command below:
@@ -1792,7 +1904,7 @@ addkey
 
 Now, depending on the services you are going to use your authentication key, you may select either `ECC` key (recommended) or older `RSA` key. Note, that some cloud providers like AWS do not support ECC key types at the time of writing. However, if you still prefer to use ECC key with GPG, you can generate additional RSA key using PIV applet, which you can use for "legacy" services.
 
-If you select `(12) ECC (encrypt only)` kind of key, type:
+If you select `(11) ECC (set your own capabilities)` kind of key, type:
 
 ```sh
 11
@@ -1976,7 +2088,7 @@ Error: No certificate found.
 
 To check if slot has key pair generated, run the command below:
 
-**NOTE: This command may wipe the certificate from your slot. Use with caution! It is recommended to check for certificate existence before running this command. **
+** NOTE: This command may wipe the certificate from your slot. Use with caution! It is recommended to check for certificate existence before running this command. **
 
 ```sh
 openssl genrsa -out /tmp/private.pem 2048
@@ -2009,13 +2121,13 @@ As Secure Boot verification process to not take certificate expiry time into acc
 As Secure Boot keys generation consist of several commands, we will use helper script. As usual, first examine the script:
 
 ```sh
-cat ./secure-and-reproducible-arch-linux/scripts/generate-secure-boot-keys.sh
+cat /mnt/tmp/secure-and-reproducible-arch-linux/scripts/generate-secure-boot-keys.sh
 ```
 
 Now, run it with your personal identifier as an argument to generate the keys:
 
 ```sh
-./secure-and-reproducible-arch-linux/scripts/generate-secure-boot-keys.sh "John Doe's"
+/mnt/tmp/secure-and-reproducible-arch-linux/scripts/generate-secure-boot-keys.sh "John Doe's"
 ```
 
 The content of the script is taken from [Gentoo wiki](https://wiki.gentoo.org/wiki/User:Sakaki/Sakaki%27s_EFI_Install_Guide/Configuring_Secure_Boot_under_OpenRC#Saving_Current_Keystore_Values.2C_and_Creating_New_Keys).
@@ -2024,16 +2136,18 @@ The content of the script is taken from [Gentoo wiki](https://wiki.gentoo.org/wi
 
 With Secure Boot keys generate, now we can transfer Database key into the YubiKey.
 
-First, we will import private key using the command below:
+First, make directory with generates secrets your working directory.
+
+Then, we will import private key using the command below:
 
 ```sh
-ykman piv import-key --management-key $(cat ../yubikey-piv-applet-management-key) --pin-policy ALWAYS --touch-policy ALWAYS 9c db.key
+ykman piv import-key --management-key $(cat yubikey-piv-applet-management-key) --pin-policy ALWAYS --touch-policy ALWAYS 9c secureboot/db.key
 ```
 
-Once finished, we can import the certificate:
+Next, we can import the certificate:
 
 ```sh
-ykman piv import-certificate --management-key $(cat ../yubikey-piv-applet-management-key) --verify 9c db.crt
+ykman piv import-certificate --management-key $(cat yubikey-piv-applet-management-key) --verify 9c secureboot/db.crt
 ```
 
 You can verify the import process by running:
@@ -2081,7 +2195,7 @@ pkcs11:model=PKCS%2315%20emulated;manufacturer=piv_II;serial=cf397c0faff98e2d;to
 Now, we can generate test Secure Boot signature using the command below:
 
 ```sh
-sbsign --engine pkcs11 --key 'pkcs11:manufacturer=piv_II' --cert db.crt --output test-secure-boot-signature --detached /run/archiso/bootmnt/arch/boot/x86_64/vmlinuz-linux
+sbsign --engine pkcs11 --key 'pkcs11:manufacturer=piv_II;id=%02' --cert secureboot/db.crt --output test-secure-boot-signature --detached /run/archiso/bootmnt/arch/boot/x86_64/vmlinuz-linux
 ```
 
 This command will ask you for PIN twice and you need to finalize the process by touching the YubiKey.
@@ -2091,7 +2205,7 @@ This command will ask you for PIN twice and you need to finalize the process by 
 Now, to verify generated signature, run:
 
 ```sh
-sbverify --cert db.crt --detached test-secure-boot-signature /run/archiso/bootmnt/arch/boot/x86_64/vmlinuz-linux
+sbverify --cert secureboot/db.crt --detached test-secure-boot-signature /run/archiso/bootmnt/arch/boot/x86_64/vmlinuz-linux
 ```
 
 If everything went well, you should get the following output:
@@ -2100,12 +2214,10 @@ If everything went well, you should get the following output:
 Signature verification OK
 ```
 
-##### Summary
-
-To finish Secure Boot keys generation, go back to Offline Backup Volume root directory:
+To clean up, you can now remove test signature file using command below:
 
 ```sh
-cd ..
+rm test-secure-boot-signature
 ```
 
 #### Master Password Recovery
@@ -2121,7 +2233,7 @@ While Shamir's Secret Sharing has mixed opinions in terms of security and in cer
 Shards generation commands use a helper script to verify that you shard correct input. Examine the script before running it:
 
 ```sh
-cat ./secure-and-reproducible-arch-linux/scripts/safe-input-password.sh
+cat /mnt/tmp/secure-and-reproducible-arch-linux/scripts/safe-input-password.sh
 ```
 
 Next, export the identifier for shards, which will be appended at the beginning of each shard:
@@ -2133,7 +2245,7 @@ export SHARD_IDENTIFIER=john-doe-master-password
 You can generate your shares using the following command:
 
 ```sh
-(set -o pipefail && ./secure-and-reproducible-arch-linux/scripts/safe-input-password.sh | ssss-split -w $SHARD_IDENTIFIER -t 3 -n 5 -q | tr \\n ' ' && echo) > master-password-shards
+(set -o pipefail && /mnt/tmp/secure-and-reproducible-arch-linux/scripts/safe-input-password.sh | ssss-split -w $SHARD_IDENTIFIER -t 3 -n 5 -q | tr \\n ' ' && echo) > master-password-shards
 ```
 
 You can see generated shards by inspecting `master-password-shards` file:
@@ -2142,10 +2254,18 @@ You can see generated shards by inspecting `master-password-shards` file:
 less master-password-shards
 ```
 
-Now, we will encrypt each shard separately using your GPG key, so you can securely distribute it later. To do that, run the command below:
+Now, we will encrypt each shard separately using your GPG key, so you can securely distribute it later.
+
+First, select right recipient:
 
 ```sh
-for i in {1..5}; do cat master-password-shards | awk -v i=$i '{print $i}' | gpg --encrypt --armor --recipient john.doe@example.com > "master-password-shard-${i}.gpg"; done
+export RECIPIENT=$(gpg --with-colons --list-secret-keys $KEYID | grep '^uid' | head -n1 | cut -d: -f10)
+```
+
+Then, run the command below to encrypt each shard:
+
+```sh
+for i in {1..5}; do cat master-password-shards | awk -v i=$i '{print $i}' | gpg --encrypt --armor --recipient "${RECIPIENT}" > "master-password-shard-${i}.gpg"; done
 ```
 
 This will generate 5 GPG encrypted files, which we will later on copy into temporary volume.
@@ -2202,6 +2322,301 @@ Encrypted version of Disk Encryption Recovery Key will also be stored in encrypt
 
 Head to [Selecting hardware hostname](#selecting-hardware-hostname) step of [Generating hardware secrets](#generating-hardware-secrets) section and follow the steps from there to generate required hardware secrets, then return here.
 
+#### (Optional) Generating PIV authentication certificate
+
+If you decided to generate ED25519 GPG authentication key, but you sometimes need RSA key e.g. for popular cloud providers like AWS or Azure, you can generate additional RSA key pair which will be stored on `9a` authentication slot in PIV applet of your YubiKeys, so you can use them for SSH.
+
+To generate new RSA private key, run the command below:
+
+```sh
+openssl genrsa -out yubikey-piv-applet-9a-private-key.pem 2048
+```
+
+Now, to generate public key, which will be used for PIV operations, run the command below:
+
+```sh
+openssl rsa -in yubikey-piv-applet-9a-private-key.pem -outform PEM -pubout -out yubikey-piv-applet-9a-public-key.pem
+```
+
+Then, we will import private key using the command below:
+
+```sh
+ykman piv import-key --management-key $(cat yubikey-piv-applet-management-key) --pin-policy ONCE --touch-policy ALWAYS 9a yubikey-piv-applet-9a-private-key.pem
+```
+
+If you didn't generate a certificate yet, we are going to do this right now. We will generate a self-signed certificate using imported RSA key, so PIV/PKCS #11 lib is able to extract the public-key from the smartcard. For that, first export desired certificate identifier:
+
+```sh
+export IDENTIFIER="John's Doe"
+```
+
+Then, run the command below to generate the certificate:
+
+```sh
+test -f yubikey-piv-applet-9a-certificate.pem || ykman piv generate-certificate --management-key $(cat yubikey-piv-applet-management-key) --subject "${IDENTIFIER} Authentication Key"  --valid-days 1 9a yubikey-piv-applet-9a-public-key.pem
+```
+
+Once finished, we can export the certificate so we can import it into other YubiKeys:
+
+```sh
+ykman piv export-certificate 9a yubikey-piv-applet-9a-certificate.pem
+```
+
+Now, if you already generated the certificate, run the command below to import it into YubiKey:
+
+```sh
+test -f yubikey-piv-applet-9a-certificate.pem && ykman piv import-certificate --management-key $(cat yubikey-piv-applet-management-key) --verify 9a yubikey-piv-applet-9a-certificate.pem
+```
+
+This way, both of your YubiKeys will have the same certificate and you will be able to create identical copy in case your YubiKey gets lost or destroyed.
+
+You can verify the import process by running:
+
+```sh
+ykman piv info
+```
+
+#### (Optional) Generating PIV encryption certificate
+
+If you plan to use PKCS#11 as a backend for GPG, it is recommended to generate separate encryption certificate on PIV applet, similarly to what you would do with OpenPGP applet.
+
+This certificate will be stored on dedicated `9d` slot.
+
+Note, that while using PKCS#11 for GPG is more convenient, as GPG's `scdaemon` and `opensc` clients do not compete against exclusive access to `pcscd` daemon, it might be considered less secure due to fact, that at the time of writing OpenSC do not support RSA 4096 bits key nor ED25519. Only RSA 2048 bits key are supported.
+
+To generate new RSA private key, run the command below:
+
+```sh
+openssl genrsa -out yubikey-piv-applet-9d-private-key.pem 2048
+```
+
+Now, to generate public key, which will be used for PIV operations, run the command below:
+
+```sh
+openssl rsa -in yubikey-piv-applet-9d-private-key.pem -outform PEM -pubout -out yubikey-piv-applet-9d-public-key.pem
+```
+
+Then, we will import private key using the command below:
+
+```sh
+ykman piv import-key --management-key $(cat yubikey-piv-applet-management-key) --pin-policy ONCE --touch-policy ALWAYS 9d yubikey-piv-applet-9d-private-key.pem
+```
+
+If you didn't generate a certificate yet, we are going to do this right now. We will generate a self-signed certificate using imported RSA key, so PIV/PKCS #11 lib is able to extract the public-key from the smartcard. For that, first export desired certificate identifier:
+
+```sh
+export IDENTIFIER="John's Doe"
+```
+
+Then, run the command below to generate the certificate:
+
+```sh
+test -f yubikey-piv-applet-9d-certificate.pem || ykman piv generate-certificate --management-key $(cat yubikey-piv-applet-management-key) --subject "${IDENTIFIER} Encryption Key"  --valid-days 1 9d yubikey-piv-applet-9d-public-key.pem
+```
+
+Once finished, we can export the certificate so we can import it into other YubiKeys:
+
+```sh
+ykman piv export-certificate 9d yubikey-piv-applet-9d-certificate.pem
+```
+
+Now, if you already generated the certificate, run the command below to import it into YubiKey:
+
+```sh
+test -f yubikey-piv-applet-9d-certificate.pem && ykman piv import-certificate --management-key $(cat yubikey-piv-applet-management-key) --verify 9d yubikey-piv-applet-9d-certificate.pem
+```
+
+This way, both of your YubiKeys will have the same certificate and you will be able to create identical copy in case your YubiKey gets lost or destroyed.
+
+You can verify the import process by running:
+
+```sh
+ykman piv info
+```
+
+#### (Optional) Adding PIV certificates into GPG Master Key
+
+If you generated all 3 PIV certificates (signing for Secure Boot, authentication and encryption), you can add them as a sub-keys to your GPG Master key to use them instead of natively generated ones. As explained in section above, this has advantages and disadvantages.
+
+##### Configuring gpg-agent and gnupg-pkcs11-scd
+
+First, we need to configure GPG to use `gnupg-pkcs11-scd` instead of shipped by default `scdaemon`, which allows using PIV certificates (tokens) with GPG. This can be done using the commands below:
+
+```sh
+echo "scdaemon-program /usr/bin/gnupg-pkcs11-scd" > ${GNUPGHOME}/gpg-agent.conf
+cat <<EOF > ${GNUPGHOME}/gnupg-pkcs11-scd.conf
+providers p1
+provider-p1-library /usr/lib/opensc-pkcs11.so
+EOF
+```
+
+Now, stop running `gpg-agent` using the command below, so it can pick up new configuration on new start:
+
+```sh
+gpgconf --kill gpg-agent
+```
+
+If you run the command below, you should see that now GPG sees empty smartcard:
+
+```sh
+gpg --card-status
+```
+
+##### Detecting key grips
+
+Now, run the command below to verify that `gpg-agent` can see keys from PIV applet:
+
+```sh
+echo "SCD LEARN" | gpg-agent --server gpg-connect-agent
+```
+
+If you get a lot of output and it includes CNs of your PIV certificates, you can extract the information about the keys using commands below:
+
+```sh
+AUTHENTICATION_KEY=""; until test -n "${AUTHENTICATION_KEY}"; do AUTHENTICATION_KEY=$(echo "SCD LEARN" | gpg-agent --server gpg-connect-agent 2>&1 | grep Authentication | grep '^S' | awk '{print $3}' | tail -n1); done; echo $AUTHENTICATION_KEY
+SIGNING_KEY=""; until test -n "${SIGNING_KEY}"; do SIGNING_KEY=$(echo "SCD LEARN" | gpg-agent --server gpg-connect-agent 2>&1 | grep Signing | grep '^S' | awk '{print $3}' | tail -n1); done; echo $SIGNING_KEY
+ENCRYPTION_KEY=""; until test -n "${ENCRYPTION_KEY}"; do ENCRYPTION_KEY=$(echo "SCD LEARN" | gpg-agent --server gpg-connect-agent 2>&1 | grep Encryption | grep '^S' | awk '{print $3}' | tail -n1); done; echo $ENCRYPTION_KEY
+```
+
+Now, we can configure `gnupg-pkcs11-scd` to show the fingerprints of your certificates using this command:
+
+```sh
+cat <<EOF >> ${GNUPGHOME}/gnupg-pkcs11-scd.conf
+
+openpgp-auth ${AUTHENTICATION_KEY}
+openpgp-sign ${SIGNING_KEY}
+openpgp-encr ${ENCRYPTION_KEY}
+EOF
+```
+
+##### Adding keys to Master Key
+
+With `gnupg-pkcs11-scd` fully configured, we can now add PIV keys into our GPG Master key. To start, run the command below:
+
+```sh
+gpg --edit-key --expert $KEYID
+```
+
+###### Adding authentication key
+
+Add new key:
+
+```sh
+addkey
+```
+
+Select `(13 Existing key)`:
+
+```sh
+13
+```
+
+Now, paste first key ID printed above, which should be authentication key.
+
+Then, deselect `Sign` and `Encrypt` capabilities and select `Authenticate` instead:
+
+```sh
+s
+e
+a
+```
+
+And confirm:
+
+```sh
+q
+```
+
+Set expiration time to `1y`, similar to native GPG keys:
+
+```sh
+1y
+y
+y
+```
+
+###### Adding signing key
+
+Add new key:
+
+```sh
+addkey
+```
+
+Select `(13 Existing key)`:
+
+```sh
+13
+```
+
+Now, paste second key ID printed above, which should be signing key.
+
+Then, deselect  `Encrypt` capability to leave only `Sign`:
+
+```sh
+e
+```
+
+And confirm:
+
+```sh
+q
+```
+
+Set expiration time to `1y`, similar to native GPG keys:
+
+```sh
+1y
+y
+y
+```
+
+###### Adding encryption key
+
+Add new key:
+
+```sh
+addkey
+```
+
+Select `(13 Existing key)`:
+
+```sh
+13
+```
+
+Now, paste last key ID printed above, which should be encryption key.
+
+Then, deselect `Sign` capability to leave only `Encrypt`:
+
+```sh
+s
+e
+a
+```
+
+And confirm:
+
+```sh
+q
+```
+
+Set expiration time to `1y`, similar to native GPG keys:
+
+```sh
+1y
+y
+y
+```
+
+Finally, save everything you've done:
+
+```sh
+save
+```
+
+At this point, you should be able to use GPG to sign, encrypt and authenticate.
+
 ### Saving and synchronizing data between Offline Backup Volumes
 
 At this point, you should have all secrets created or generated, which are covered by the general bootstrap process. There will be more secrets to generate, which will be done for each machine you have, described in [Hardware Bootstrapping](#hardware-bootstrapping) section, but this will be done later.
@@ -2212,15 +2627,23 @@ At this point, all secrets are stored on a single Offline Backup Volume and we n
 - Versioning of generated secrets.
 - Improved integrity with Git checksums.
 
+#### Initializing repository
+
+First, we will initialize Git repository, so we can add some local configuration, which will be persistent on Offline Backup Volume.
+
+```sh
+git init
+```
+
 #### Configuring Git
 
-First, we will generate basic Git configuration, which will use GPG. This can be done automatically using the command below:
+Generate basic Git configuration, which will use GPG. This can be done automatically using the command below:
 
 ```sh
 export NAME=$(gpg --with-colons --list-keys $KEYID | grep '^uid' | head -n1 | cut -d: -f 10 | cut -d\< -f1 | sed 's/ $//g')
 export EMAIL=$(gpg --with-colons --list-keys $KEYID | grep '^uid' | head -n1 | cut -d: -f 10 | cut -d\< -f2 | sed -E 's/( |>)$//g')
 export SIGNING_KEY=$(gpg --with-colons --list-keys $KEYID | grep :s: | cut -d: -f5)
-cat <<EOF > ~/.gitconfig
+cat <<EOF | tee .git/config
 [user]
         email = ${EMAIL}
         name = ${NAME}
@@ -2230,12 +2653,17 @@ cat <<EOF > ~/.gitconfig
 EOF
 ```
 
-#### Initializing repository
-
-Now, having mounted Offline Backup Volume as a working directory, we can initialize new Git repository and commit all generated files into it by running the commands below:
+To make sure `git` can ask you for PIV PIN, run the command below:
 
 ```sh
-git init
+export GPG_TTY=$(tty)
+```
+
+#### Committing all data
+
+With basic configuration, we can now commit all generated files into the Git repository by running the commands below:
+
+```sh
 git add --all
 git commit -s -m "Initial commit"
 ```
@@ -2256,7 +2684,7 @@ Creating a copy of data into another Offline Backup Volume is as simple as runni
 export OBV_ID=OBV2
 export MOUNTPOINT=/mnt/$OBV_ID
 rm -rf ${MOUNTPOINT}/lost+found
-git clone . $MOUNTPOINT
+git clone $(pwd) $MOUNTPOINT
 ```
 
 #### Syncing further changes
@@ -2288,9 +2716,17 @@ And also run:
 git pull --ff-only origin master
 ```
 
-### Transferring GPG keys into YubiKeys
+### (Optional) Transferring GPG keys into YubiKeys
+
+**If you use PIV certificates for your GPG keys, you can skip this section.**
 
 With all generates secrets synchronized and versioned, you can now transfer generated GPG keys into all your YubiKeys. As `keytocard` GPG command removes the keys from your local GPG keyring, we will use `git restore` functionality to restore them to be able to transfer them into backup YubiKey.
+
+Before you start, make sure you remember or copy your GPG Admin PIN into clipboard. You can print your Admin PIN using the command below:
+
+```sh
+cat yubikey-gpg-smartcard-admin-pin
+```
 
 To transfer keys into YubiKey, start by running the command below:
 
@@ -2318,6 +2754,8 @@ Select `(1) Signature key` slot for storing the key:
 1
 ```
 
+Now, `gpg` will ask you for Admin PIN. It may actually ask you twice in this step.
+
 Next, deselect Signature key and select Encryption key:
 
 ```sh
@@ -2337,6 +2775,8 @@ This time, select only available `(2) Encryption key` slot:
 2
 ```
 
+Now, `gpg` will ask you for Admin PIN.
+
 Next, deselect Encryption key and select authentication key:
 
 ```sh
@@ -2355,6 +2795,8 @@ Select `(3) Authentication key` slot:
 ```sh
 3
 ```
+
+Now, `gpg` will ask you for Admin PIN.
 
 Finally, confirm everything:
 
@@ -2440,7 +2882,7 @@ systemctl stop systemd-networkd.service
 Next, make your Offline Backup Volume available. Use the following commands to identify the right device:
 
 ```sh
-ls -d /dev/disk/by-id/* | grep -v -E -- '(-part[0-9]+|by-id/(dm|lvm|wwn|nvme-eui)-)'
+ls -d /dev/disk/by-id/* | grep -v -E -- '(-part[0-9]+|by-id/(dm|lvm|wwn|nvme-eui|ata)-)'
 journalctl -fk | grep 'SerialNumber:'
 ```
 
@@ -2518,7 +2960,7 @@ BIOS password security is described with more details in [BIOS Password](#bios-p
 If you want to make your Offline Backup Volume available again, run the following commands to identify the right device:
 
 ```sh
-ls -d /dev/disk/by-id/* | grep -v -E -- '(-part[0-9]+|by-id/(dm|lvm|wwn|nvme-eui)-)'
+ls -d /dev/disk/by-id/* | grep -v -E -- '(-part[0-9]+|by-id/(dm|lvm|wwn|nvme-eui|ata)-)'
 journalctl -fk | grep 'SerialNumber:'
 ```
 
