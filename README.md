@@ -3592,4 +3592,6 @@ Removable device, which contains your personalized Arch Linux installer.
 Here is list of online resources, which were main source of building this guide:
 
 - https://github.com/drduh/YubiKey-Guide - Fantastic guide on using GPG keys with YubiKeys.
-- https://safeboot.dev/ - Awesome project describing use of Secure Boot, TPM and `sd-verity`.
+- https://safeboot.dev/ - Awesome project describing use of Secure Boot, TPM and `dm-verity`.
+- https://www.chaplinspace.com/2020/Setup-dm-verity-on-a-minimal-debian-installation/ - Nice tutorial explaining basic setup of `dm-verity`.
+- https://amboar.github.io/notes/2020/01/08/emmc-flash-layout-design-for-bmcs.html - Another good article about `dm-verity`. There is very little documentation and examples about it on the internet in general.
