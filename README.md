@@ -20,6 +20,8 @@ The main motivation for this project is to gather and combine various best pract
 
 In addition, this project was created to automate and document usually manual and complex processes of generating and maintaining used secrets in secure way, installing and configuring Arch Linux as well as managing the data and backups on used machines. Every person dealing with their own data should be aware how to manage and secure it. Every person dealing with secrets should know how to manage them in secure manner. Every Arch Linux user should have automated installation and data restoration process to avoid problems when OS installation gets corrupted, hardware breaks or data gets removed. This guide proposes the approach for handling those processes and describes them in detail.
 
+Many tutorial about YubiKey management also provide misleading information on how many secrets there are to configure in YubiKey or say "This PUN is important, make sure you write it down somewhere safe". This guide provides a framework for this kind of secret management, ensuring that the secrets you use are managed in a safety manner.
+
 ### Status
 
 At the time of writing, [Assumptions](#assumptions), [Bootstrapping](#bootstrapping) and [Hardware bootstrapping](#hardware-bootstrapping) sections are mostly complete, as they are the base of the project.
