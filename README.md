@@ -1841,7 +1841,7 @@ save
 
 Signing key can also be saved without password, as it will be transferred into YubiKey anyway.
 
-###### Generating Encryption key
+###### (Optional) Generating Encryption key
 
 **NOTE: If you would like to use PIV keys for GPG, you can skip this step.**
 
@@ -1899,7 +1899,7 @@ save
 
 Encryption key can also be saved without password, as it will be transferred into YubiKey anyway.
 
-###### Generating Authentication Key
+###### (Optional) Generating Authentication Key
 
 **NOTE: If you would like to use PIV keys for GPG, you can skip this step.**
 
