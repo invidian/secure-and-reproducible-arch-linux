@@ -2488,9 +2488,9 @@ echo "SCD LEARN" | gpg-agent --server gpg-connect-agent
 If you get a lot of output and it includes CNs of your PIV certificates, you can extract the information about the keys using commands below:
 
 ```sh
-AUTHENTICATION_KEY=""; until test -n "${AUTHENTICATION_KEY}"; do AUTHENTICATION_KEY=$(echo "SCD LEARN" | gpg-agent --server gpg-connect-agent 2>&1 | grep Authentication | grep '^S' | awk '{print $3}' | tail -n1); done; echo $AUTHENTICATION_KEY
-SIGNING_KEY=""; until test -n "${SIGNING_KEY}"; do SIGNING_KEY=$(echo "SCD LEARN" | gpg-agent --server gpg-connect-agent 2>&1 | grep Signing | grep '^S' | awk '{print $3}' | tail -n1); done; echo $SIGNING_KEY
-ENCRYPTION_KEY=""; until test -n "${ENCRYPTION_KEY}"; do ENCRYPTION_KEY=$(echo "SCD LEARN" | gpg-agent --server gpg-connect-agent 2>&1 | grep Encryption | grep '^S' | awk '{print $3}' | tail -n1); done; echo $ENCRYPTION_KEY
+AUTHENTICATION_KEY=""; until test -n "${AUTHENTICATION_KEY}"; do AUTHENTICATION_KEY=$(echo "SCD LEARN" | gpg-agent --server gpg-connect-agent 2>&1 | grep Authentication | grep '^S' | awk '{print $3}' | tail -n1); done; echo "Authentication keygrip: $AUTHENTICATION_KEY"
+SIGNING_KEY=""; until test -n "${SIGNING_KEY}"; do SIGNING_KEY=$(echo "SCD LEARN" | gpg-agent --server gpg-connect-agent 2>&1 | grep Signing | grep '^S' | awk '{print $3}' | tail -n1); done; echo "Signing keygrip: $SIGNING_KEY"
+ENCRYPTION_KEY=""; until test -n "${ENCRYPTION_KEY}"; do ENCRYPTION_KEY=$(echo "SCD LEARN" | gpg-agent --server gpg-connect-agent 2>&1 | grep Encryption | grep '^S' | awk '{print $3}' | tail -n1); done; echo "Encryption keygrip: $ENCRYPTION_KEY"
 ```
 
 Now, we can configure `gnupg-pkcs11-scd` to show the fingerprints of your certificates using this command:
