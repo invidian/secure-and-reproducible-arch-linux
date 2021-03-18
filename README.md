@@ -3270,6 +3270,43 @@ If your machine gets damaged OR you accidentally wipe your TPM Secret...
 
 #### A password gets compromised
 
+## FAQ
+
+This section contains various question answered, which might arise while reading the guide, which has not been described earlier.
+
+### How do you protect booting Recovery OS? Does it need to be protected?
+
+- Recovery OS uses Secure Boot, which guarantees it's **Authenticity (identity)**.
+- Recovery OS uses `dm-verity` to generate hash of root filesystem, then is then added to the kernel command line parameters with EFISTUB and signed using Secure Boot Database Key. This guarantees it's **integrity**.
+- Booting from USB device usually requires providing BIOS password or enabling USB booting in the BIOS, so an attacker which posses your OS Recovery Volume still won't be able to boot it on your machine.
+- What about possible credentials stored on the image? Private keys for WireGuard installation network? WiFi password? If you encrypt it, how do you decrypt?
+  - There should be no plaintext secrets stored on the image except the WiFi password, which is required to enable installation over local wireless network. An attacker with physical access to your Recovery Image, may have physical access to your Ethernet network anyway, if you do not have 802.1X configured on Ethernet level or additional physical protection on the Ethernet ports, as:
+    - Limiting/disabling DHCP does not offer any real security.
+    - MAC address filtering does not offer good security either, as MAC addresses can be spoofed. It may also be difficult to roll out on some devices.
+    - Security measures should be also used on higher levels than MAC addresses (Layer 2) anyway to provide additional security for your network, like IP-based firewalls, authentication etc.
+  - This guide stores GPG-encrypted Disk Encryption Recovery Keys on Recovery Volume to make them available during installation. For secrets which are not required for unattended boot (e.g. WiFi password), you can use this method to securely store them on Recovery Volume.
+  - Storing other types of plaintext secrets in Recovery Image is not supported right now with this guide. If this is what you really need, perhaps you need to replace the `archiso` in Recovery Image build process to perform regular Arch Linux installation, including disk encryption, similar to what we will be finally using, then configuring `overlayfs` combined with `tmpfs` or similar configuration and mount your root partition in read-only mode, to get ISO like environment which cannot be permanently modified while used.
+
+### Why does Secure Boot keys do not require respecting expiry time?
+
+BIOS clock might be tampered (changed or reset), which would make Secure Boot to always fail, or BIOS clock can be corrected to always allow of use old Secure Boot keys. So to summarize, as clock cannot be trusted, it does not provide any real security, so it is ignored.
+
+### Why Secure Boot keys do not require periodic rotation
+
+Even though Secure Boot use X.509 certificates, it's doing so to be able to identify certificates using UUID and to attach additional metadata to the certificates using e.g. `CommonName` field.
+
+Validity time fields are not used by Secure Boot implementations.
+
+In addition to that:
+
+- Both PK and KEK private keys are kept offline, so they compromise risk is greatly limited.
+- When encrypting data is transported over insecure medium (e.g. Internet, WiFi), it is recommended to periodically rotate the encryption keys, so if attacker listening and recording the transmission manages to break the encryption key, they will only be able to access part of the transported data.
+- Signature private key is stored on Hardware Security Module, which eliminates the risk of private key being stolen.
+
+### What's the point of using multiple GPG sub-keys?
+
+### Why Arch Linux?
+
 ## Miscellaneous
 
 This section contains useful information and notes not mentioned in the sections above.
@@ -3288,19 +3325,6 @@ Here is the breakdown of supported features:
 - Emulation of YubiKey GPG smartcard applet is currently not supported either. For testing, you can:
   - Do USB pass-through of your real YubiKey device to the virtual machine. This guide use all 3 GPG slots on YubiKey, so make sure you have a backup of your existing keys.
   - Create a virtual disk which will be acting as your portable GPG keyring. Minimal extra steps will be required to get it to work, e.g. making sure virtual disk is mounted at time when GPG is required + additional environment variable to point to the right `$GNUPGHOME`.
-
-### How do you protect booting Recovery OS? Does it need to be protected?
-
-- Recovery OS uses Secure Boot, which guarantees it's **Authenticity (identity)**.
-- Recovery OS uses `dm-verity` to generate hash of root filesystem, then is then added to the kernel command line parameters with EFISTUB and signed using Secure Boot Database Key. This guarantees it's **integrity**.
-- Booting from USB device usually requires providing BIOS password or enabling USB booting in the BIOS, so an attacker which posses your OS Recovery Volume still won't be able to boot it on your machine.
-- What about possible credentials stored on the image? Private keys for WireGuard installation network? WiFi password? If you encrypt it, how do you decrypt?
-  - There should be no plaintext secrets stored on the image except the WiFi password, which is required to enable installation over local wireless network. An attacker with physical access to your Recovery Image, may have physical access to your Ethernet network anyway, if you do not have 802.1X configured on Ethernet level or additional physical protection on the Ethernet ports, as:
-    - Limiting/disabling DHCP does not offer any real security.
-    - MAC address filtering does not offer good security either, as MAC addresses can be spoofed. It may also be difficult to roll out on some devices.
-    - Security measures should be also used on higher levels than MAC addresses (Layer 2) anyway to provide additional security for your network, like IP-based firewalls, authentication etc.
-  - This guide stores GPG-encrypted Disk Encryption Recovery Keys on Recovery Volume to make them available during installation. For secrets which are not required for unattended boot (e.g. WiFi password), you can use this method to securely store them on Recovery Volume.
-  - Storing other types of plaintext secrets in Recovery Image is not supported right now with this guide. If this is what you really need, perhaps you need to replace the `archiso` in Recovery Image build process to perform regular Arch Linux installation, including disk encryption, similar to what we will be finally using, then configuring `overlayfs` combined with `tmpfs` or similar configuration and mount your root partition in read-only mode, to get ISO like environment which cannot be permanently modified while used.
 
 ### Block-based backups vs File-based backups
 
@@ -3393,22 +3417,6 @@ To protect against compromised BIOS, [tpm2-totp](https://github.com/tpm2-softwar
 The secret for `tpm2-totp` will be sealed against TPM PCR bank 7, which stores hash of the current state of Secure Boot configuration. If you replace any of Secure Boot keys like KEK or PK, the value will change, so you won't be able to generate valid TOTP code anymore. This means, if attacker replaces your Secure Boot keys with yours, you will notice that, as boot process won't be able to calculate valid TOTP code anymore.
 
 #
-
-### Why Secure Boot keys do not require periodic rotation
-
-Even though Secure Boot use X.509 certificates, it's doing so to be able to identify certificates using UUID and to attach additional metadata to the certificates using e.g. `CommonName` field.
-
-Validity time fields are not used by Secure Boot implementations.
-
-In addition to that:
-
-- Both PK and KEK private keys are kept offline, so they compromise risk is greatly limited.
-- When encrypting data is transported over insecure medium (e.g. Internet, WiFi), it is recommended to periodically rotate the encryption keys, so if attacker listening and recording the transmission manages to break the encryption key, they will only be able to access part of the transported data.
-- Signature private key is stored on Hardware Security Module, which eliminates the risk of private key being stolen.
-
-### Why does Secure Boot keys do not require respecting expiry time
-
-BIOS clock might be tampered (changed or reset), which would make Secure Boot to always fail, or BIOS clock can be corrected to always allow of use old Secure Boot keys. So to summarize, as clock cannot be trusted, it does not provide any real security, so it is ignored.
 
 ### Technology used by this guide
 
