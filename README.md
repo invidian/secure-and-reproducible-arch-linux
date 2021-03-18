@@ -3165,6 +3165,25 @@ Remember to commit all configuration changed and newly generated files and synch
 
 #### Adding new OATH-TOTP secret
 
+YubiKey 5 supports up to [32](https://support.yubico.com/hc/en-us/articles/360016614900-YubiKey-5-Series-Technical-Manual) OATH-TOTP secrets, which can be managed either using `ykman` or GUI [Yubico Authenticator](https://www.yubico.com/products/yubico-authenticator/).
+
+##### Checking alternative protocols
+
+When you enable MFA in some service, first check if they support some standards like WebAuthn or U2F, as those are better in terms of usability, as they don't need to store any secrets on your YubiKey.
+
+##### Checking for number of devices supported
+
+If OATH-TOTP is the only MFA option available, check if your service supports adding multiple devices. As you want to make sure that your other YubiKey is a fully functional copy of your primary YubiKey, you must add the secret there as well, so there can actually be 2 different secrets on each device, with the same functionality.
+
+##### Handling single-device support with redundant YubiKeys
+
+If your service supports only one OATH-TOTP device, you can add the same secret to both of your YubiKeys. If you use Yubico Authenticator, simply add new secret to your first key, then unplug it and plug your backup key and add it again.
+
+##### Adding secrets to backup YubiKey later
+
+If it happens, that you register to some service and enable MFA there and you do not have access to your backup YubiKey, make sure to get the text version of secret used for OATH-TOTP. encrypt it using your GPG key and store it in some temporary safe location (e.g. cloud storage).
+When you get access to your backup YubiKey, you can manually add the new secret in Yubico Authenticator or using `ykman oath` command.
+
 #### Provisioning new YubiKey
 
 #### Unlocking locked Master PIN
