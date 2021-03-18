@@ -3311,6 +3311,8 @@ In addition to that:
 
 This section contains useful information and notes not mentioned in the sections above.
 
+### Simultaneous access to YubiKey applets (especially OpenSC and GPG via pcscd daemon)
+
 ### Trying out this guide in virtualized environment
 
 You can try out most of the best practices described in this guide in virtualized environment e.g. using QEMU.
