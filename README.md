@@ -2468,7 +2468,7 @@ EOF
 Now, stop running `gpg-agent` using the command below, so it can pick up new configuration on new start:
 
 ```sh
-gpgconf --kill gpg-agent
+gpgconf --kill all
 ```
 
 If you run the command below, you should see that now GPG sees empty smartcard:
