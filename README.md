@@ -733,6 +733,17 @@ It is also helpful to actually have more than one machine available, so you can 
 
 #
 
+[(Optional) 1 x 4 ports USB hub](javascript:void(0);)
+
+For bootstrapping process, a lot of operations happens on USB devices, so to safe you some time and troubles with connecting, disconnecting, mounting and unmounting the devices, a passive 4 ports USB hub is a nice thing to have, so you can have the following devices plugged at the same time:
+
+- Arch Linux bootable ISO
+- Temporary Volume
+- Offline Backup Volume
+- YubiKey
+
+#
+
 #### [1 x Temporary Computer running Linux, Windows or macOS](javascript:void(0);)
 
 For bootstrapping process, this guide requires you to have a machine running modern OS, from which you will be able to create a bootable USB stick with Arch Linux ISO.
@@ -795,6 +806,7 @@ To summarize, following hardware is required for bootstrapping process:
 - 1 x x86 machine currently running modern OS
 - 2 x YubiKey 5 Series
 - 5 x 8GB+ pendrive (2 x backup + 2 x recovery + 1 x temporary)
+- (Optional) 1 x 4 ports USB hub
 
 And additionally for day-2 operations:
 
