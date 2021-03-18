@@ -3055,6 +3055,111 @@ This section documents various processes, which are needed in daily use, like [U
 
 #### Updating BIOS
 
+### GPG
+
+#### Swapping GPG to backup YubiKey
+
+If you try to use your backup YubiKey with GPG, you will probably and up with an error similar to the following:
+
+```console
+Please remove the current card and insert the one with serial number:
+
+  3131 XXX
+```
+
+This happens, because GPG stores the PKCS11 URLs to the private keys stored on YubiKey PIV applet, which includes the `serial` field, which is part of the CHUID of PIV applet, which is unique to each YubiKey can cannot be configured, so 2 YubiKeys are identical.
+
+Due to this, when you want to switch from using one YubiKey to another for GPG, you need to remove the private key references from your GPG keyring, so GPG can re-detect them under new PKCS11 URLs.
+
+To make your backup YubiKey usable with GPG, run the commands from [Detecting key grips](#detecting-key-grips) section to export information about your keygrips. Then, the easiest way to make a switch is to remove a private keys references from your GPG keyring using the obtained keygrips. You can do this using the command below:
+
+```sh
+rm ~/.gnupg/private-keys-v1.d/${AUTHENTICATION_KEY}.key
+rm ~/.gnupg/private-keys-v1.d/${SIGNING_KEY}.key
+rm ~/.gnupg/private-keys-v1.d/${ENCRYPTION_KEY}.key
+```
+
+Now, run `gpg --card-status` to trigger smartcard detection.
+
+If you try using GPG now, it should work again.
+
+#### Using GPG via PKCS11 without YubiKey
+
+One of the downsides of using  GPG sub-keys via PIV applet described in section [(Optional) Adding PIV certificates into GPG Master Key](#optional-adding-piv-certificates-into-gpg-master-key) is, that using GPG sub-keys without YubiKey becomes not trivial, but fortunately, not impossible either. Usage of Master Key remains unaffected and usable.
+
+If you want to use your GPG keys using Offline Backup Volume without a YubiKey or if you lose both of your YubiKeys and you need to use GPG, this section describes how to configure it.
+
+To satisfy your GPG Master Key, we will use [SoftHSM](https://github.com/opendnssec/SoftHSMv2) software, which allows to create a file-based PKCS11 backend. You will initialize the SoftHSM token on your Offline Backup Volume, import your PIV certificates there and reconfigure `gnupg-pkcs11-scd` to use SoftHSM instead of OpenSC for performing private keys operations.
+
+To do that, you need to access your Offline Backup Volume by booting Recovery Volume in offline mode.
+
+With Offline Backup Volume as a working directory, first we will create SoftHSM2 configuration and a helper script, which will make it easier for you to use it in the future. Run the commands below to create them:
+
+```sh
+cp /etc/softhsm2.conf ./
+cat <<EOF > ./softhsm.sh
+#!/bin/bash
+export SOFTHSM2_CONF=\$(pwd)/softhsm2.conf
+sed -i '/tokendir/d' softhsm2.conf
+SOFTHSM2_PATH=\$(pwd)/softhsm2
+mkdir -p $SOFTHSM2_PATH
+echo "directories.tokendir = ${SOFTHSM2_PATH}" >> $SOFTHSM2_CONF
+EOF
+chmod +x softhsm.sh
+. ./softhsm.sh
+```
+
+Now, you can initialize SoftHSM using the command below:
+
+```sh
+softhsm2-util --init-token --free --label GPG
+```
+
+The command will ask you to configure PUK and PIN. For PUK, I suggest default Admin PIN, so `12345678`, as you will never use it and for PIN, I suggest using your Master PIN, for convenience.
+
+You can now confirm that `p11tool` lists your token using this command:
+
+```sh
+p11tool --list-tokens
+```
+
+Next step is to import the certificates into SoftHSM Token. Before we do that, we will generate Signing Key (from Secure Boot) RSA public key, as this was not done as part of bootstrapping and it's required for this step. It can be done using the command below:
+
+```sh
+openssl rsa -in secureboot/db.key -outform PEM -pubout > secureboot/db.pem
+```
+
+Now, import all certificates into the token:
+
+```sh
+export TOKEN=$(p11tool --list-tokens | grep SoftHSM | awk '{print $2}')
+p11tool --load-privkey yubikey-piv-applet-9a-private-key.pem --write --id 01 --label "Authentication Key " $TOKEN
+p11tool --load-pubkey yubikey-piv-applet-9a-public-key.pem --write --id 01 --label "Authentication Key " $TOKEN
+p11tool --load-certificate yubikey-piv-applet-9a-certificate.pem --write --id 01 --label "Authentication Key " $TOKEN
+p11tool --load-privkey secureboot/db.key --write --id 01 --label "Signing Key " $TOKEN
+p11tool --load-pubkey secureboot/db.pem --write --id 01 --label "Signing Key " $TOKEN
+p11tool --load-certificate secureboot/db.crt --write --id 01 --label "Signing Key " $TOKEN
+p11tool --load-privkey yubikey-piv-applet-9d-private-key.pem --write --id 03 --label "Encryption Key " $TOKEN
+p11tool --load-pubkey yubikey-piv-applet-9d-public-key.pem --write --id 03 --label "Encryption Key " $TOKEN
+p11tool --load-certificate yubikey-piv-applet-9d-certificate.pem --write --id 03 --label "Encryption Key " $TOKEN
+```
+
+Finally, reconfigure `gnupg-pkcs11-scd` using the commands below to use SoftHSM:
+
+```sh
+sed -i '/provider-p1-library/d' gnupg-workspace/gnupg-pkcs11-scd.conf
+echo "provider-p1-library /usr/lib/softhsm/libsofthsm2.so" >> gnupg-workspace/gnupg-pkcs11-scd.conf
+```
+
+And apply the configuration:
+
+```sh
+gpgconf --kill all
+```
+
+You will also need to follow [Swapping GPG to backup YubiKey](#swapping-gpg-to-backup-yubikey) steps to remove the existing private keygrips from your GPG keyring, so GPG can detect new PKCS11 URLs pointing to SoftHSM. After that, GPG should be usable.
+
+Remember to commit all configuration changed and newly generated files and synchronize the content to your other Offline Backup Volumes.
 
 ### YubiKey Maintenance
 
