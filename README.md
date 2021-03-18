@@ -3186,9 +3186,11 @@ When you get access to your backup YubiKey, you can manually add the new secret 
 
 #### Provisioning new YubiKey
 
-#### Unlocking locked Master PIN
+#### Unlocking locked GPG Admin PIN
 
-##### Decommissioning old YubiKey device
+#### Unlocking locked PIV PIN
+
+#### Decommissioning old YubiKey device
 
 If you no longer want to use your YubiKey or you want to replace it with the new model, here is recommended list of steps, which will securely wipe all your secrets from your existing YubiKey.
 
