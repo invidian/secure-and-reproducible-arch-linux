@@ -892,13 +892,13 @@ If you want to have a graphical interface during bootstrapping, for example to b
 
 ```sh
 # Ignore linux package (kernel update) to avoid removing kernel modules, which will be required for example for mounting ext4 filesystem.
-# - gnome-shell - Main GUI package.
-# - gnome-terminal - For Terminal in GUI.
 # - firefox - For browsing Web and guide online.
 # - gnome-control-center - For adjusting GUI settings like resolution or mouse.
-# - nautilus - For visually checking files and mounts.
+# - gnome-shell - Main GUI package.
+# - gnome-terminal - For Terminal in GUI.
 # - keepassxc - For testing password strength.
-pacman -Syyu --ignore linux gnome-shell gnome-terminal firefox gnome-control-center nautilus keepassxc
+# - nautilus - For visually checking files and mounts.
+pacman -Syyu --ignore linux firefox gnome-control-center gnome-shell gnome-terminal keepassxc nautilus
 XDG_SESSION_TYPE=wayland dbus-run-session gnome-session
 ```
 
@@ -1041,16 +1041,17 @@ Use Terminal opened in previous step or make sure you're in the temporary volume
 
 ```sh
 # Breakdown of dependencies:
-# - hopenpgp-tools - Fecommended by https://github.com/drduh/YubiKey-Guide for linting your GPG key.
-# - yubikey-manager - For configuring YubiKey.
-# - git - For versioning and syncing data on Offline Backup Volumes.
-# - sbsigntools - For testing Secure Boot signing using YubiKey.
-# - libp11 - PKCS#11 engine for sbsign, requires to work with YubiKey.
-# - opensc - Smart card tools required for p11tool to detect the YubiKey as smartcard.
 # - ccid - Smart card driver.
 # - efitools - For transforming Secure Boot signature lists.
+# - git - For versioning and syncing data on Offline Backup Volumes.
 # - gnupg-pkcs11-scd - For using PIV applet for GPG.
-pacman -Syyw hopenpgp-tools yubikey-manager git sbsigntools libp11 opensc ccid efitools gnupg-pkcs11-scd
+# - hopenpgp-tools - Fecommended by https://github.com/drduh/YubiKey-Guide for linting your GPG key.
+# - libp11 - PKCS#11 engine for sbsign, requires to work with YubiKey.
+# - opensc - Smart card tools required for p11tool to detect the YubiKey as smartcard.
+# - sbsigntools - For testing Secure Boot signing using YubiKey.
+# - softhsm - In case you use PIV applet for GPG sub-keys, but you want to use GPG without YubiKey.
+# - yubikey-manager - For configuring YubiKey.
+pacman -Syyw ccid efitools git gnupg-pkcs11-scd hopenpgp-tools libp11 opensc sbsigntools softhsm yubikey-manager
 mkdir -p packages
 cp /var/cache/pacman/pkg/* ./packages/
 ```
