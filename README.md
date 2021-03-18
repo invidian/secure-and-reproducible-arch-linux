@@ -921,7 +921,7 @@ gpg --import invidian.gpg
 Then, run the commands below to fetch and verify this repository:
 
 ```sh
-export VERSION=testing2
+export VERSION=bootstrap-v0.1.0-rc1
 curl -L https://github.com/invidian/secure-and-reproducible-arch-linux/releases/download/${VERSION}/${VERSION}.tar.gz.asc -o ${VERSION}.tar.gz.asc
 curl -L https://github.com/invidian/secure-and-reproducible-arch-linux/archive/${VERSION}.tar.gz -o ${VERSION}.tar.gz
 gpg --verify ${VERSION}.tar.gz.asc ${VERSION}.tar.gz
