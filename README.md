@@ -2493,16 +2493,7 @@ SIGNING_KEY=""; until test -n "${SIGNING_KEY}"; do SIGNING_KEY=$(echo "SCD LEARN
 ENCRYPTION_KEY=""; until test -n "${ENCRYPTION_KEY}"; do ENCRYPTION_KEY=$(echo "SCD LEARN" | gpg-agent --server gpg-connect-agent 2>&1 | grep Encryption | grep '^S' | awk '{print $3}' | tail -n1); done; echo "Encryption keygrip: $ENCRYPTION_KEY"
 ```
 
-Now, we can configure `gnupg-pkcs11-scd` to show the fingerprints of your certificates using this command:
-
-```sh
-cat <<EOF >> ${GNUPGHOME}/gnupg-pkcs11-scd.conf
-
-openpgp-auth ${AUTHENTICATION_KEY}
-openpgp-sign ${SIGNING_KEY}
-openpgp-encr ${ENCRYPTION_KEY}
-EOF
-```
+This information will be needed in next steps when adding keys to GPG Master Key.
 
 ##### Adding keys to Master Key
 
