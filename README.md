@@ -1053,6 +1053,7 @@ Use Terminal opened in previous step or make sure you're in the temporary volume
 
 ```sh
 # Breakdown of dependencies:
+# - archiso - To automatically pull all dependencies of archiso script.
 # - ccid - Smart card driver.
 # - efitools - For transforming Secure Boot signature lists.
 # - git - For versioning and syncing data on Offline Backup Volumes.
@@ -1062,8 +1063,9 @@ Use Terminal opened in previous step or make sure you're in the temporary volume
 # - opensc - Smart card tools required for p11tool to detect the YubiKey as smartcard.
 # - sbsigntools - For testing Secure Boot signing using YubiKey.
 # - softhsm - In case you use PIV applet for GPG sub-keys, but you want to use GPG without YubiKey.
+# - tpm2-tools - For interating with TPM2.0 on your hardware.
 # - yubikey-manager - For configuring YubiKey.
-pacman -Syyw ccid efitools git gnupg-pkcs11-scd hopenpgp-tools libp11 opensc sbsigntools softhsm yubikey-manager
+pacman -Syyw archiso ccid efitools git gnupg-pkcs11-scd hopenpgp-tools libp11 opensc sbsigntools softhsm tpm2-tools yubikey-manager
 mkdir -p packages
 cp /var/cache/pacman/pkg/* ./packages/
 ```
