@@ -2869,6 +2869,32 @@ In this step, we will prepare your first Recovery Volume, which is Arch Linux bo
 
 Reboot your machine now and boot it again with Arch Linux ISO. Follow [Configuring Arch Linux ISO](#configuring-arch-linux-iso) and [Mount Temporary Volume](#mount-temporary-volume) again to prepare your environment.
 
+#### Archiso
+
+The repository you downloaded at the beginning of bootstrap process and which is now stored on temporary volume includes a modified copy of [archiso](https://wiki.archlinux.org/index.php/archiso) utility, which is used for building official Arch Linux ISO images. This guide uses modified version of it, which supports both Secure Boot and `dm-verity`, which is used to dynamically validate that data on the Recovery Volume has not been tempered.
+
+By default `archiso` use [systemd-boot](https://wiki.archlinux.org/index.php/systemd-boot) to manage boot entries and GPG for validation the inner data image in ISO image. However, they do not provide any support for Secure Boot. The GPG signature validation is not very secure either without the Secure Boot, as the signature can simply be replaced with different one and you wouldn't even notice it. Also, GPG validation do not cover entire content of the ISO image (though files which are ignored are not really important). GPG validation may also be a bit slow on older hardware and is definitely slower than `dm-verity`, which is performed dynamically when OS accesses specific data blocks on the partition. `dm-verity` also offers protection during entire time the operating system is running. If file on verity device would be modified, reading such file will fail.
+
+Modified version of `archiso` in this guide use Unified Kernel Images as a method for booting the ISO image. This method offers simplicity of setup, as there is no intermediate bootloader involved in the boot process, as Kernel image is built into the UEFI binary, which is executed by default by UEFI. One less component in boot process makes it easier to secure, as in this case, we build UEFI binary including kernel, kernel command line parameters and other information, then we sign it directly using Signing Key, which is stored in Secure Boot Signature Database (DB).
+
+##### Limitations
+
+The consequence of such setup is limited flexibility, as it is only possible to boot one image and set of parameters, as there is no boot loader to allow us to select what to boot. For example, booting `memtest86+` from Recovery Volume is not possible, though it is acceptable for this guide, as the Recovery Volumes are designed to be used "often", depending how often you would like to reinstall your system, or how often your installation breaks and needs to be manually repaired, while `memtest86+` is usually used only if your hardware is possible defected. On the other hand, once you install the OS, you can place `memtest86+` and other UEFI binaries onto your EFI partition, sign them with Signing key and configure your UEFI to be able to boot them using `efibootmgr`, in addition to your default boot option.
+
+##### Summary
+
+You can find modified `mkarchiso` script [here](archiso/archiso/mkarchiso).
+
+#### Default archiso profile
+
+This repository also provides a customized version of Archiso `releng` profile, which adds tools requires by this guide and support for the features in used customized version of Archiso.
+
+The shipped profile is addition-only and tries to only ship files which are required. A lot of files in this profile is actually not used (e.g. syslinux or efiboot configuration), but they are kept to allow easy synchronization with upstream Archiso profiles.
+
+It is recommended, that each user creates their own copy (or fork) of this profile and customize it for their needs by adding hardware profiles etc.
+
+You can find modified profile in [archiso-recovery-volume-profile](archiso-recovery-volume-profile/) directory.
+
 #### Customizing your Arch Linux ISO profile
 
 ##### Network setup
@@ -2879,6 +2905,10 @@ Reboot your machine now and boot it again with Arch Linux ISO. Follow [Configuri
 
 #### Saving your Arch Linux ISO profile
 
+#### Building Arch Linux ISO using mkarchiso
+
+
+
 #### Writing your Arch Linux ISO into Recovery Volume
 
 ### Summary
@@ -2887,7 +2917,11 @@ Reboot your machine now and boot it again with Arch Linux ISO. Follow [Configuri
 
 ## Hardware Bootstrapping
 
+When you purchase new hardware, there are some one-time steps required to adopt the hardware into your build system and to "own" them by rolling your own BIOS password and Secure Boot keys. This section explains those steps.
+
 ### Generating hardware secrets
+
+This guide handles BIOS password and Disk Encryption Recovery Keys as secrets unique to each hardware you own. Unique secrets per device minimize the impact if any of those gets compromised, an attacker won't be able to use it against your other hardware pieces.
 
 #### Booting Recovery Volume in Offline mode
 
@@ -2948,7 +2982,7 @@ export TARGET_HOSTNAME=dellxps15johndoe
 
 If your Secure Boot with TPM setup breaks for some reason, you will be able to use unique Disk Encryption Recovery Key for each of your device, which will be stored on Offline Backup Volume or encrypted in Recovery Volume, to access your data and possibly fix your installation.
 
-It is recommended, that your Disk Encryption Recovery Key is at least 55 characters long, consisting of lower and upper case letters and numbers, which should give you at least 256 bits of entropy using [zxcvbn](https://dropbox.tech/security/zxcvbn-realistic-password-strength-estimation) algorithm. This should be sufficient to provide good protection (more described in [AES-256 Security](#aes-256-security) section) and be short enough it can be typed by hand.
+It is recommended, that your Disk Encryption Recovery Key is at least 55 characters long, consisting of lower and upper case letters and numbers, which should give you at least 256 bits of entropy using [zxcvbn](https://dropbox.tech/security/zxcvbn-realistic-password-strength-estimation) algorithm. This should be sufficient to provide good protection (more described in [AES-256 Security](#aes-256-security) section) and be short enough it can be typed by hand if needed.
 
 To generate Disk Encryption Recovery Key, run the command below:
 
@@ -3018,12 +3052,14 @@ If you are following [Bootstrapping](#bootstrapping) process right now, head bac
 If you are going to shut down the machine now, run this commands below before unplugging the volumes to remove them securely from the system:
 
 ```sh
-cd && sync && umount /mnt/*
+cd && sync -f /mnt/* && umount /mnt/*
 ```
 
 ### Build Recovery Volume with new hardware profile
 
-TODO: add steps to add new hardware profile
+With new encrypted Disk Encryption Recovery Key on Temporary Volume, you should now access your Recovery Volume profile repository and add the recovery key there, together with new hardware profile for the hostname you previously selected.
+
+New profile for your hardware can be very basic. You can install it, then figure out all required hardware-specific quirks on live system and move them back to Recovery Volume profile for reproducibility.
 
 ### BIOS Setup
 
