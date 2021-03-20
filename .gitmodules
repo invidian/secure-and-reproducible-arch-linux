@@ -1,3 +1,6 @@
 [submodule "archiso"]
 	path = archiso
 	url = https://github.com/invidian/archiso.git
+[submodule "archiso-recovery-volume-profile"]
+	path = archiso-recovery-volume-profile
+	url = https://github.com/invidian/archiso-recovery-volume-profile.git
